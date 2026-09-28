@@ -71,3 +71,13 @@ $RECYCLE.BIN/
 *.tmp
 *.temp
 .cache/
+
+# agents & ai
+.agents/
+AGENTS.md
+CLAUDE.md
+skills-lock.json
+
+# stitch screens & mockups
+stitch_screens/
+
