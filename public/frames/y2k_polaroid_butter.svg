@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 900" width="600" height="900">
+  <!-- Buttercream Yellow Background -->
+  <rect x="0" y="0" width="600" height="900" fill="#FEF08A" />
+  <rect x="0" y="0" width="600" height="900" fill="none" stroke="#2E0F15" stroke-width="3" />
+
+  <!-- Header -->
+  <text x="300" y="52" font-family="'DM Sans', sans-serif" font-size="11" font-weight="800" letter-spacing="3" fill="#2E0F15" text-anchor="middle">★ DOUBLE POLAROID EDITORIAL ★</text>
+
+  <!-- Slot 0: x=60, y=80, w=480, h=330 -->
+  <rect x="56" y="76" width="488" height="338" fill="#FDFBF7" stroke="#2E0F15" stroke-width="2" />
+  <rect x="60" y="80" width="480" height="330" fill="none" stroke="#2E0F15" stroke-width="1.5" />
+
+  <!-- Slot 1: x=60, y=450, w=480, h=330 -->
+  <rect x="56" y="446" width="488" height="338" fill="#FDFBF7" stroke="#2E0F15" stroke-width="2" />
+  <rect x="60" y="450" width="480" height="330" fill="none" stroke="#2E0F15" stroke-width="1.5" />
+
+  <!-- Washi Tape Overlays -->
+  <rect x="230" y="65" width="140" height="24" fill="rgba(247, 168, 184, 0.8)" stroke="#2E0F15" stroke-width="1" transform="rotate(-3 300 77)" />
+  <rect x="470" y="440" width="80" height="22" fill="rgba(210, 241, 124, 0.85)" stroke="#2E0F15" stroke-width="1" transform="rotate(15 510 451)" />
+
+  <!-- Footer Tag -->
+  <text x="300" y="825" font-family="'Playfair Display', serif" font-style="italic" font-size="24" fill="#2E0F15" text-anchor="middle">Golden Hour Moments</text>
+  <text x="300" y="855" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700" letter-spacing="2" fill="#827375" text-anchor="middle">DIGITAL SCRAPBOOK ARCHIVE</text>
+</svg>

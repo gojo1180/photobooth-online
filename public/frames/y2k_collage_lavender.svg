@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1150" width="800" height="1150">
+  <defs>
+    <filter id="lavenderShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="3" dy="3" stdDeviation="0" flood-color="#1230c7" />
+    </filter>
+  </defs>
+
+  <!-- Background Linen -->
+  <rect x="0" y="0" width="800" height="1150" fill="#FDF9F3" />
+  <rect x="0" y="0" width="800" height="1150" fill="none" stroke="#1230c7" stroke-width="4" />
+
+  <!-- Header Banner -->
+  <rect x="0" y="0" width="800" height="75" fill="#1230c7" />
+  <text x="400" y="38" font-family="'Playfair Display', serif" font-style="italic" font-size="24" fill="#FEF08A" text-anchor="middle">Scribblepie Studio</text>
+  <text x="400" y="58" font-family="'Space Grotesk', sans-serif" font-size="10" font-weight="700" letter-spacing="4" fill="#FFFFFF" text-anchor="middle">MINI COLLAGE 6 POSES • EDITION 06</text>
+
+  <!-- 6 Slot Outlines:
+       Slot 0: x=45,  y=90,  w=335, h=300
+       Slot 1: x=420, y=90,  w=335, h=300
+       Slot 2: x=45,  y=410, w=335, h=300
+       Slot 3: x=420, y=410, w=335, h=300
+       Slot 4: x=45,  y=730, w=335, h=300
+       Slot 5: x=420, y=730, w=335, h=300 -->
+  <rect x="45" y="90" width="335" height="300" fill="none" stroke="#1230c7" stroke-width="2" />
+  <rect x="420" y="90" width="335" height="300" fill="none" stroke="#1230c7" stroke-width="2" />
+  <rect x="45" y="410" width="335" height="300" fill="none" stroke="#1230c7" stroke-width="2" />
+  <rect x="420" y="410" width="335" height="300" fill="none" stroke="#1230c7" stroke-width="2" />
+  <rect x="45" y="730" width="335" height="300" fill="none" stroke="#1230c7" stroke-width="2" />
+  <rect x="420" y="730" width="335" height="300" fill="none" stroke="#1230c7" stroke-width="2" />
+
+  <!-- Artisanal Stickers & Badges -->
+  <g transform="translate(370, 385)" filter="url(#lavenderShadow)">
+    <circle cx="30" cy="30" r="28" fill="#FDE2E8" stroke="#1230c7" stroke-width="2" />
+    <text x="30" y="37" font-size="20" text-anchor="middle">★</text>
+  </g>
+  <g transform="translate(370, 705)" filter="url(#lavenderShadow)">
+    <circle cx="30" cy="30" r="28" fill="#D2F17C" stroke="#1230c7" stroke-width="2" />
+    <text x="30" y="37" font-size="20" text-anchor="middle">♥</text>
+  </g>
+
+  <!-- Bottom Stamp Bar -->
+  <rect x="45" y="1050" width="710" height="75" rx="10" fill="#FFFFFF" stroke="#1230c7" stroke-width="2" />
+  <text x="75" y="1082" font-family="'Space Grotesk', sans-serif" font-size="13" font-weight="800" letter-spacing="1" fill="#1230c7">SCRIBBLEPIE ARCHIVE</text>
+  <text x="75" y="1104" font-family="'Space Grotesk', sans-serif" font-size="10" font-weight="600" fill="#64748b">VOL. 06 / SIX POSES MEMORIES</text>
+
+  <g transform="translate(615, 1065)">
+    <rect width="115" height="32" rx="16" fill="#FEF08A" stroke="#1230c7" stroke-width="1.5" />
+    <text x="57" y="21" font-family="'Space Grotesk', sans-serif" font-size="10" font-weight="800" fill="#1230c7" text-anchor="middle">VERIFIED ✦</text>
+  </g>
+</svg>

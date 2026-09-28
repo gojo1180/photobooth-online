@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 960" width="800" height="960">
+  <defs>
+    <filter id="cherryShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="3" dy="3" stdDeviation="0" flood-color="#2E0F15" />
+    </filter>
+  </defs>
+
+  <!-- Frame Background (Chocolate Cherry #2E0F15 with border) -->
+  <rect x="0" y="0" width="800" height="960" fill="#2E0F15" />
+  <rect x="0" y="0" width="800" height="960" fill="none" stroke="#D2F17C" stroke-width="4" />
+
+  <!-- Header Section -->
+  <text x="400" y="55" font-family="'Playfair Display', serif" font-style="italic" font-size="28" fill="#F7A8B8" text-anchor="middle">the iconic duo</text>
+  <text x="400" y="78" font-family="'DM Sans', sans-serif" font-size="11" font-weight="700" letter-spacing="4" fill="#D2F17C" text-anchor="middle">SCRAPBOOK 2X2 MINI GRID</text>
+
+  <!-- 4 Slot Borders (2x2 grid):
+       Slot 0: x=45,  y=100, w=335, h=335
+       Slot 1: x=420, y=100, w=335, h=335
+       Slot 2: x=45,  y=470, w=335, h=335
+       Slot 3: x=420, y=470, w=335, h=335 -->
+  <rect x="45" y="100" width="335" height="335" fill="none" stroke="#FDFBF7" stroke-width="2" />
+  <rect x="420" y="100" width="335" height="335" fill="none" stroke="#FDFBF7" stroke-width="2" />
+  <rect x="45" y="470" width="335" height="335" fill="none" stroke="#FDFBF7" stroke-width="2" />
+  <rect x="420" y="470" width="335" height="335" fill="none" stroke="#FDFBF7" stroke-width="2" />
+
+  <!-- Center Sticker Pin -->
+  <g transform="translate(370, 415)" filter="url(#cherryShadow)">
+    <circle cx="30" cy="30" r="30" fill="#D2F17C" stroke="#2E0F15" stroke-width="2" />
+    <text x="30" y="37" font-size="22" text-anchor="middle">⚡</text>
+  </g>
+
+  <!-- Top Right Tape -->
+  <rect x="680" y="85" width="80" height="22" fill="rgba(247, 168, 184, 0.85)" stroke="#2E0F15" stroke-width="1" transform="rotate(25 720 96)" />
+
+  <!-- Bottom Stamp Bar -->
+  <rect x="45" y="835" width="710" height="85" rx="8" fill="#FDFBF7" stroke="#2E0F15" stroke-width="2" />
+  <text x="75" y="872" font-family="'DM Sans', sans-serif" font-size="14" font-weight="800" letter-spacing="1" fill="#2E0F15">PHOTOBOOTH ARCHIVE</text>
+  <text x="75" y="895" font-family="'DM Sans', sans-serif" font-size="10" font-weight="600" fill="#827375">VOL. 04 / EXCLUSIVE CUT</text>
+
+  <g transform="translate(620, 850)">
+    <rect width="110" height="32" rx="16" fill="#D2F17C" stroke="#2E0F15" stroke-width="1.5" />
+    <text x="55" y="21" font-family="'DM Sans', sans-serif" font-size="10" font-weight="800" fill="#2E0F15" text-anchor="middle">APPROVED ✦</text>
+  </g>
+</svg>
