@@ -4,12 +4,15 @@
 
   html {
     scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
   }
 
   html,
   body {
     margin: 0;
     padding: 0;
+    max-width: 100%;
+    overflow-x: clip;
   }
 
   body {
@@ -138,17 +141,17 @@
 
 /* Typography styles matching Stitch 1:1 */
 .font-headline-lg {
-  font-family: 'Vollkorn', Georgia, serif !important;
+  font-family: var(--font-vollkorn), Georgia, serif !important;
 }
 
 .text-headline-lg {
-  font-size: 40px !important;
-  line-height: 48px !important;
+  font-size: 34px !important;
+  line-height: 40px !important;
   font-weight: 600 !important;
 }
 
 .font-headline-md {
-  font-family: 'Space Grotesk', sans-serif !important;
+  font-family: var(--font-space-grotesk), sans-serif !important;
 }
 
 .text-headline-md {
@@ -159,7 +162,7 @@
 }
 
 .font-body-lg {
-  font-family: 'Vollkorn', Georgia, serif !important;
+  font-family: var(--font-vollkorn), Georgia, serif !important;
 }
 
 .text-body-lg {
@@ -169,7 +172,7 @@
 }
 
 .font-body-md {
-  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-family: var(--font-jakarta), sans-serif !important;
 }
 
 .text-body-md {
@@ -179,7 +182,7 @@
 }
 
 .font-body-sm {
-  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-family: var(--font-jakarta), sans-serif !important;
 }
 
 .text-body-sm {
@@ -189,7 +192,7 @@
 }
 
 .font-label-md {
-  font-family: 'Space Grotesk', sans-serif !important;
+  font-family: var(--font-space-grotesk), sans-serif !important;
 }
 
 .text-label-md {
@@ -200,7 +203,7 @@
 }
 
 .font-label-sm {
-  font-family: 'Space Grotesk', sans-serif !important;
+  font-family: var(--font-space-grotesk), sans-serif !important;
 }
 
 .text-label-sm {
@@ -356,8 +359,69 @@
 }
 
 .px-margin {
-  padding-left: 2rem !important;
-  padding-right: 2rem !important;
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+}
+
+@media (min-width: 640px) {
+  .text-headline-lg {
+    font-size: 40px !important;
+    line-height: 48px !important;
+  }
+
+  .px-margin {
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .print-output,
+  .print-output * {
+    visibility: visible;
+  }
+
+  .print-output {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 0;
+    background: white;
+  }
+
+  .print-output canvas {
+    width: auto !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  @page {
+    margin: 12mm;
+  }
 }
 
 .pt-space-lg {

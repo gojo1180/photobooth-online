@@ -14,6 +14,7 @@ export function CaptureSession() {
     pushCapturedPhoto,
     setStep,
     countdownSeconds,
+    soundEnabled,
   } = usePhotoboothStore();
 
   const {
@@ -53,18 +54,20 @@ export function CaptureSession() {
       let currentSeconds = countdownSeconds || 3;
       setCountdownNum(currentSeconds);
       setIsCountdown(true);
-      playBeep(880, 0.12);
+      if (soundEnabled) playBeep(880, 0.12);
 
       const interval = setInterval(() => {
         currentSeconds -= 1;
         if (currentSeconds > 0) {
           setCountdownNum(currentSeconds);
-          playBeep(880, 0.12);
+          if (soundEnabled) playBeep(880, 0.12);
         } else {
           clearInterval(interval);
           setIsCountdown(false);
-          playBeep(1760, 0.18);
-          playShutter();
+          if (soundEnabled) {
+            playBeep(1760, 0.18);
+            playShutter();
+          }
           triggerShutterFlash();
 
           // Capture snapshot from webcam
@@ -96,6 +99,7 @@ export function CaptureSession() {
     capturedPhotos.length,
     expectedPhotoCount,
     countdownSeconds,
+    soundEnabled,
     captureSnapshot,
     pushCapturedPhoto,
     triggerShutterFlash,
@@ -232,8 +236,8 @@ export function CaptureSession() {
               {/* Feed Top Overlay */}
               <div className="relative z-10 flex items-center justify-between">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary text-on-primary font-label-sm text-label-sm shadow-xs font-bold">
-                  <span className="w-2 h-2 rounded-full bg-green-400 animate-ping" />
-                  MAIN CAMERA (LIVE)
+                  <span className={`w-2 h-2 rounded-full ${isReady ? 'bg-green-400' : 'bg-amber-300 animate-pulse'}`} />
+                  {isReady ? 'MAIN CAMERA (LIVE)' : 'CONNECTING CAMERA'}
                 </span>
                 <span className="w-7 h-7 rounded-full bg-surface/80 backdrop-blur-sm text-primary flex items-center justify-center shadow">
                   <span className="material-symbols-outlined text-[16px]">videocam</span>
@@ -266,7 +270,7 @@ export function CaptureSession() {
             </div>
 
             {/* Feed 2: Latest Captured Preview or Standby Graphic */}
-            <div className="relative group rounded-lg overflow-hidden bg-surface-dim aspect-[3/4] flex flex-col justify-between p-space-sm shadow-[inset_0_2px_8px_rgba(0,0,0,0.12)]">
+            <div className="relative group rounded-lg overflow-hidden bg-surface-dim aspect-[3/4] hidden md:flex flex-col justify-between p-space-sm shadow-[inset_0_2px_8px_rgba(0,0,0,0.12)]">
               {/* If a previous photo has been taken, show it! Else show stylish standby illustration */}
               {capturedPhotos.length > 0 ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -365,20 +369,20 @@ export function CaptureSession() {
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-secondary-container" />
               <span className="font-label-sm text-label-sm text-on-surface-variant uppercase font-bold">
-                Quality: High-Res 300 DPI Archival
+                Quality: High-Resolution Browser Capture
               </span>
             </div>
           </div>
         </div>
 
         {/* PRIMARY SHUTTER ACTION BAR (High Graphic Contrast) */}
-        <div className="w-full flex flex-col sm:flex-row items-center justify-center gap-space-md my-space-lg">
+        <div className="sticky bottom-3 z-40 w-full flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-space-md my-space-lg rounded-2xl border border-outline-variant/30 bg-surface/95 p-3 shadow-xl backdrop-blur-md sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
           <button
             onClick={startSequentialCapture}
             disabled={isCountdown || !isReady}
             id="shutterButton"
             type="button"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-space-sm bg-secondary-container hover:bg-secondary-container/90 text-on-secondary-container font-headline-md text-headline-md uppercase px-8 py-5 rounded-xl shadow-md hover:shadow-lg transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed font-bold"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-space-sm bg-secondary-container hover:bg-secondary-container/90 text-on-secondary-container font-headline-md text-[15px] sm:text-headline-md uppercase px-5 sm:px-8 py-4 sm:py-5 rounded-xl shadow-md hover:shadow-lg transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed font-bold"
           >
             <span className="material-symbols-outlined text-[32px]">camera</span>
             <span className="tracking-wide">
@@ -395,7 +399,7 @@ export function CaptureSession() {
             onClick={handleReplayLastPose}
             disabled={capturedPhotos.length === 0}
             type="button"
-            className="inline-flex items-center justify-center gap-1.5 px-5 py-4 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md uppercase border border-outline-variant/30 shadow-xs transition-transform active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed font-bold"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-5 py-3 sm:py-4 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md uppercase border border-outline-variant/30 shadow-xs transition-transform active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed font-bold"
           >
             <span className="material-symbols-outlined text-[18px]">replay</span>
             <span>Retake Pose {capturedPhotos.length || 1}</span>

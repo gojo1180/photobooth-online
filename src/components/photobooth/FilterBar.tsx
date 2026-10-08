@@ -4,7 +4,11 @@ import { usePhotoboothStore } from '@/stores/usePhotoboothStore';
 import { PHOTO_FILTERS } from '@/lib/konva-helpers';
 import { Sliders, Wand2 } from 'lucide-react';
 
-export function FilterBar() {
+interface FilterBarProps {
+  readOnly?: boolean;
+}
+
+export function FilterBar({ readOnly = false }: FilterBarProps) {
   const { activeFilter, setActiveFilter } = usePhotoboothStore();
 
   return (
@@ -23,8 +27,9 @@ export function FilterBar() {
             <button
               key={key}
               type="button"
+              disabled={readOnly}
               onClick={() => setActiveFilter(key)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${isSelected
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all ${readOnly ? 'cursor-not-allowed opacity-70' : 'cursor-pointer active:scale-95'} ${isSelected
                   ? 'bg-primary text-white shadow-xs'
                   : 'bg-surface-container-lowest text-on-surface border border-outline-variant/30 hover:bg-surface-container-low'
                 }`}

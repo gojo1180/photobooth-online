@@ -5,13 +5,12 @@ import { useState, useCallback } from 'react';
 export function useGifCompiler() {
   const [isCompiling, setIsCompiling] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [gifUrl, setGifUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const compileGif = useCallback(
     async (
       imageUrls: string[],
-      options: { delay?: number; width?: number; height?: number } = {}
+      options: { delay?: number; width?: number; height?: number; cssFilter?: string } = {}
     ): Promise<string | null> => {
       if (typeof window === 'undefined' || imageUrls.length === 0) return null;
 
@@ -58,7 +57,37 @@ export function useGifCompiler() {
         for (const img of loadedImages) {
           if (ctx) {
             ctx.clearRect(0, 0, width, height);
-            ctx.drawImage(img, 0, 0, width, height);
+            ctx.fillStyle = '#FDF9F3';
+            ctx.fillRect(0, 0, width, height);
+            ctx.filter = options.cssFilter || 'none';
+
+            const sourceRatio = img.naturalWidth / img.naturalHeight;
+            const targetRatio = width / height;
+            let sourceWidth = img.naturalWidth;
+            let sourceHeight = img.naturalHeight;
+            let sourceX = 0;
+            let sourceY = 0;
+
+            if (sourceRatio > targetRatio) {
+              sourceWidth = img.naturalHeight * targetRatio;
+              sourceX = (img.naturalWidth - sourceWidth) / 2;
+            } else {
+              sourceHeight = img.naturalWidth / targetRatio;
+              sourceY = (img.naturalHeight - sourceHeight) / 2;
+            }
+
+            ctx.drawImage(
+              img,
+              sourceX,
+              sourceY,
+              sourceWidth,
+              sourceHeight,
+              0,
+              0,
+              width,
+              height
+            );
+            ctx.filter = 'none';
             gif.addFrame(ctx, { copy: true, delay: frameDelay });
           }
         }
@@ -70,7 +99,6 @@ export function useGifCompiler() {
 
           gif.on('finished', (blob: Blob) => {
             const url = URL.createObjectURL(blob);
-            setGifUrl(url);
             setIsCompiling(false);
             setProgress(100);
             resolve(url);
@@ -95,21 +123,16 @@ export function useGifCompiler() {
   );
 
   const resetGif = useCallback(() => {
-    if (gifUrl) {
-      URL.revokeObjectURL(gifUrl);
-    }
-    setGifUrl(null);
     setProgress(0);
     setIsCompiling(false);
     setError(null);
-  }, [gifUrl]);
+  }, []);
 
   return {
     compileGif,
     resetGif,
     isCompiling,
     progress,
-    gifUrl,
     error,
   };
 }

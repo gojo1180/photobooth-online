@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
-import { type FrameItem } from '@/stores/usePhotoboothStore';
+import { usePhotoboothStore, type FrameItem } from '@/stores/usePhotoboothStore';
 import { PHOTO_FILTERS, calculateCoverCrop } from '@/lib/konva-helpers';
 
 export interface CanvasStageRef {
@@ -27,15 +27,40 @@ const CANVAS_FALLBACK_PHOTOS = [
   createFallbackPhoto('Pose #6', '#fae8ff', '#581c87'),
 ];
 
+const FRAME_THEMES: Record<string, { background: string; foreground: string; accent: string }> = {
+  cream: { background: '#FDF9F3', foreground: '#001C97', accent: '#895100' },
+  pink: { background: '#FDE2E8', foreground: '#001C97', accent: '#6E315A' },
+  butter: { background: '#FEF08A', foreground: '#1C1C18', accent: '#895100' },
+  cherry: { background: '#24131D', foreground: '#FDF9F3', accent: '#FFB86D' },
+};
+
+function fitCanvasText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  preferredSize: number,
+  fontFamily: string
+) {
+  let fontSize = preferredSize;
+  do {
+    ctx.font = `600 ${fontSize}px ${fontFamily}`;
+    if (ctx.measureText(text).width <= maxWidth) break;
+    fontSize -= 1;
+  } while (fontSize > 12);
+}
+
 export const CanvasStage = forwardRef<CanvasStageRef, CanvasStageProps>(
   ({ frame, photos, filterKey }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const [isRendering, setIsRendering] = useState(false);
+    const { cardCaption, showDateStamp, dateStampText, frameThemeKey } = usePhotoboothStore();
 
     // Provide imperative export method
     useImperativeHandle(ref, () => ({
       exportHighResPng: () => {
-        if (!canvasRef.current) return null;
+        if (!canvasRef.current || isRendering || !frame || photos.length < frame.slots.length) {
+          return null;
+        }
         return canvasRef.current.toDataURL('image/png', 1.0);
       },
     }));
@@ -55,8 +80,10 @@ export const CanvasStage = forwardRef<CanvasStageRef, CanvasStageProps>(
       canvas.width = width;
       canvas.height = height;
 
-      // Draw neutral background: Cream Linen
-      ctx.fillStyle = '#FDF9F3';
+      const theme = FRAME_THEMES[frameThemeKey] || FRAME_THEMES.cream;
+
+      // Draw the selected matte color as the physical print background.
+      ctx.fillStyle = theme.background;
       ctx.fillRect(0, 0, width, height);
 
       // 1. Load frame overlay image
@@ -186,13 +213,57 @@ export const CanvasStage = forwardRef<CanvasStageRef, CanvasStageProps>(
           }
         }
 
+        // Render the personalized print footer into the same canvas used for export.
+        const maxSlotBottom = Math.max(...effectiveSlots.map((slot) => slot.y + slot.height), 0);
+        const footerTop = Math.min(height - 72, maxSlotBottom + Math.max(10, height * 0.012));
+        const footerHeight = height - footerTop;
+
+        if (footerHeight >= 48 && (cardCaption.trim() || showDateStamp)) {
+          ctx.save();
+          ctx.globalAlpha = 0.94;
+          ctx.fillStyle = theme.background;
+          ctx.fillRect(0, footerTop, width, footerHeight);
+          ctx.restore();
+
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+
+          if (cardCaption.trim()) {
+            ctx.fillStyle = theme.foreground;
+            fitCanvasText(
+              ctx,
+              cardCaption.trim(),
+              width * 0.86,
+              Math.max(18, Math.min(34, width * 0.042)),
+              'Vollkorn, Georgia, serif'
+            );
+            ctx.fillText(
+              cardCaption.trim(),
+              width / 2,
+              footerTop + footerHeight * (showDateStamp ? 0.38 : 0.53)
+            );
+          }
+
+          if (showDateStamp && dateStampText) {
+            ctx.fillStyle = theme.accent;
+            fitCanvasText(
+              ctx,
+              dateStampText.toUpperCase(),
+              width * 0.78,
+              Math.max(11, Math.min(16, width * 0.022)),
+              '"Plus Jakarta Sans", Arial, sans-serif'
+            );
+            ctx.fillText(dateStampText.toUpperCase(), width / 2, footerTop + footerHeight * 0.72);
+          }
+        }
+
         setIsRendering(false);
       });
 
       return () => {
         isCancelled = true;
       };
-    }, [frame, photos, filterKey]);
+    }, [cardCaption, dateStampText, filterKey, frame, frameThemeKey, photos, showDateStamp]);
 
     if (!frame) {
       return (

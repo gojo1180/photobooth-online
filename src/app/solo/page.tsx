@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Navbar } from '@/components/common/Navbar';
 import { Footer } from '@/components/common/Footer';
 import { LayoutSelector } from '@/components/photobooth/LayoutSelector';
@@ -17,9 +17,22 @@ export default function SoloPage() {
     selectedFrame,
     capturedPhotos,
     activeFilter,
+    selectedLayoutId,
+    expectedPhotoCount,
   } = usePhotoboothStore();
 
   const stageRef = useRef<CanvasStageRef | null>(null);
+  const hasLayout = Boolean(selectedLayoutId && expectedPhotoCount > 0);
+  const hasCompleteCapture = hasLayout && capturedPhotos.length >= expectedPhotoCount;
+
+  let safeStep = step;
+  if (step !== 'SELECT_LAYOUT' && !hasLayout) safeStep = 'SELECT_LAYOUT';
+  if ((step === 'CUSTOMIZE' || step === 'EXPORT') && !hasCompleteCapture) safeStep = 'CAPTURE';
+  if (step === 'EXPORT' && !selectedFrame) safeStep = 'CUSTOMIZE';
+
+  useEffect(() => {
+    if (safeStep !== step) setStep(safeStep);
+  }, [safeStep, setStep, step]);
 
   const handleExportPng = () => {
     if (stageRef.current) {
@@ -29,11 +42,11 @@ export default function SoloPage() {
   };
 
   // 1. STEP 1: PILIH FORMAT (Matching 2_step1_pilih_grid_layout.html)
-  if (step === 'SELECT_LAYOUT') {
+  if (safeStep === 'SELECT_LAYOUT') {
     return (
       <div className="flex flex-col min-h-screen bg-background">
         <Navbar />
-        <main className="w-full pt-20 bg-background">
+        <main className="w-full pt-16 md:pt-20 bg-background">
           <LayoutSelector />
         </main>
       </div>
@@ -41,11 +54,11 @@ export default function SoloPage() {
   }
 
   // 2. STEP 2: SESI FOTO (Matching 3_step2_sesi_pengambilan_foto.html)
-  if (step === 'CAPTURE') {
+  if (safeStep === 'CAPTURE') {
     return (
       <div className="flex flex-col min-h-screen bg-background">
         <Navbar />
-        <main className="w-full pt-20 bg-background">
+        <main className="w-full pt-16 md:pt-20 bg-background">
           <CaptureSession />
         </main>
       </div>
@@ -53,11 +66,11 @@ export default function SoloPage() {
   }
 
   // 3. STEP 3: EDIT BINGKAI (Matching 4_step3_studio_review_and_frame_editor.html)
-  if (step === 'CUSTOMIZE') {
+  if (safeStep === 'CUSTOMIZE') {
     return (
       <div className="flex flex-col min-h-screen bg-background">
         <Navbar />
-        <main className="w-full pt-20 bg-background">
+        <main className="w-full pt-16 md:pt-20 bg-background">
           <StudioEditor />
         </main>
       </div>
@@ -69,7 +82,7 @@ export default function SoloPage() {
     <div className="flex flex-col min-h-screen bg-background text-on-surface">
       <Navbar />
 
-      <main className="w-full pt-20 bg-background">
+      <main className="w-full pt-16 md:pt-20 bg-background">
         {/* Top Hero Banner */}
         <section className="w-full bg-secondary-container text-on-secondary relative pt-8 sm:pt-12 pb-28 sm:pb-32 md:pb-36 overflow-hidden">
           <div className="max-w-7xl mx-auto px-margin relative z-20 flex flex-col items-center text-center">
@@ -104,7 +117,7 @@ export default function SoloPage() {
         <section className="max-w-7xl mx-auto px-margin py-space-xl">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-xl items-start">
             {/* Left: Composite Canvas Stage Preview */}
-            <div className="lg:col-span-7 flex flex-col items-center">
+            <div className="print-output lg:col-span-7 flex flex-col items-center">
               <CanvasStage
                 ref={stageRef}
                 frame={selectedFrame}

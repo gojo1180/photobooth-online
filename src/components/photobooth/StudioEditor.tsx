@@ -122,13 +122,18 @@ export function StudioEditor() {
     selectedFrame,
     activeFilter,
     setActiveFilter,
+    frameThemeKey,
+    setFrameThemeKey,
+    cardCaption,
+    setCardCaption,
+    showDateStamp,
+    setShowDateStamp,
+    dateStampText,
+    setDateStampText,
   } = usePhotoboothStore();
 
   const [activeFilterKey, setActiveFilterKey] = useState<string>(activeFilter || 'natural');
-  const [frameThemeKey, setFrameThemeKey] = useState<string>('cream');
-  const [cardCaption, setCardCaption] = useState<string>('Scribblepie Keepsake');
-  const [showDateStamp, setShowDateStamp] = useState<boolean>(true);
-  const [previewMode, setPreviewMode] = useState<'sheet' | 'canvas'>('sheet');
+  const [previewMode, setPreviewMode] = useState<'sheet' | 'canvas'>('canvas');
   const [retakePoseIndex, setRetakePoseIndex] = useState<number | null>(null);
 
   const totalSlots = expectedPhotoCount || 4;
@@ -221,7 +226,7 @@ export function StudioEditor() {
                       : 'text-on-surface-variant hover:text-on-surface'
                   }`}
                 >
-                  Sheet Preview
+                  Quick Mockup
                 </button>
                 <button
                   type="button"
@@ -232,7 +237,7 @@ export function StudioEditor() {
                       : 'text-on-surface-variant hover:text-on-surface'
                   }`}
                 >
-                  Canvas Stage
+                  Final Export
                 </button>
               </div>
             </div>
@@ -314,11 +319,7 @@ export function StudioEditor() {
                   {showDateStamp && (
                     <div className="text-right">
                       <p className="font-label-sm text-[11px] font-mono tracking-wider font-bold">
-                        {new Date().toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: '2-digit',
-                          year: 'numeric',
-                        })}
+                        {dateStampText}
                       </p>
                       <p className="font-label-sm text-[9px] uppercase tracking-widest opacity-70">
                         VOL. 02 • STUDIO
@@ -527,6 +528,24 @@ export function StudioEditor() {
                       className="w-5 h-5 accent-primary cursor-pointer"
                     />
                   </div>
+                  {showDateStamp && (
+                    <div>
+                      <label
+                        className="font-label-sm text-label-sm uppercase text-on-surface-variant block mb-1 font-bold"
+                        htmlFor="date-stamp-input"
+                      >
+                        Date Stamp Text
+                      </label>
+                      <input
+                        id="date-stamp-input"
+                        maxLength={24}
+                        value={dateStampText}
+                        onChange={(event) => setDateStampText(event.target.value)}
+                        type="text"
+                        className="w-full bg-surface-container px-3 py-2 rounded-lg font-body-sm text-body-sm text-on-surface focus:outline-none focus:bg-surface-bright focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium border border-outline-variant/30"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -543,11 +562,12 @@ export function StudioEditor() {
               </button>
 
               <button
-                onClick={() => setStep('EXPORT')}
+                onClick={() => selectedFrame && setStep('EXPORT')}
+                disabled={!selectedFrame}
                 type="button"
-                className="inline-flex items-center gap-3 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md uppercase px-space-lg py-3.5 rounded-lg shadow-sm hover:shadow active:scale-[0.98] transition-all w-full sm:w-auto justify-center cursor-pointer font-bold"
+                className="inline-flex items-center gap-3 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md uppercase px-space-lg py-3.5 rounded-lg shadow-sm hover:shadow active:scale-[0.98] transition-all w-full sm:w-auto justify-center cursor-pointer font-bold disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <span>PROCEED TO PRINT &amp; EXPORT</span>
+                <span>{selectedFrame ? 'PROCEED TO PRINT & EXPORT' : 'SELECT A FRAME TO CONTINUE'}</span>
                 <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
               </button>
             </div>

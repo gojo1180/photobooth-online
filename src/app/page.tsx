@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
@@ -34,22 +34,6 @@ const scaleIn = {
   },
 };
 
-/* ─── Spotlight Card Hook ─────────────────────────────────────────── */
-function useSpotlight() {
-  const ref = useRef<HTMLDivElement>(null);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    ref.current.style.setProperty('--mouse-x', `${x}px`);
-    ref.current.style.setProperty('--mouse-y', `${y}px`);
-  }, []);
-
-  return { ref, handleMouseMove };
-}
-
 /* ─── Animated Section Wrapper ────────────────────────────────────── */
 function AnimatedSection({
   children,
@@ -70,8 +54,8 @@ function AnimatedSection({
       ref={ref}
       id={id}
       className={className}
-      initial="hidden"
-      animate={isInView ? 'visible' : 'hidden'}
+      initial={false}
+      animate={isInView ? 'visible' : undefined}
       variants={{
         hidden: { opacity: 0 },
         visible: {
@@ -291,7 +275,7 @@ const SIGNATURE_FRAMES: FrameShowcaseItem[] = [
 
 export default function HomePage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { setRoom, setRoomStep } = useRoomStore();
 
   const [duoCode, setDuoCode] = useState('');
@@ -299,9 +283,6 @@ export default function HomePage() {
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [isJoiningRoom, setIsJoiningRoom] = useState(false);
   const [activeFrameIndex, setActiveFrameIndex] = useState(0);
-
-  const soloSpotlight = useSpotlight();
-  const duoSpotlight = useSpotlight();
 
   const handleJoin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -379,7 +360,7 @@ export default function HomePage() {
       {/* Universal Responsive Navbar */}
       <Navbar />
 
-      <main className="w-full pt-20 bg-background flex-1">
+      <main className="w-full pt-16 md:pt-20 bg-background flex-1">
         <div className="flex flex-col w-full">
           {/* ========================================================================
               HERO TOP CURVED BANNER (Mustard Amber): with ambient glow + seamless wave
@@ -506,8 +487,6 @@ export default function HomePage() {
                 <motion.div
                   variants={fadeUp}
                   custom={0}
-                  ref={soloSpotlight.ref}
-                  onMouseMove={soloSpotlight.handleMouseMove}
                   className="card-spotlight bg-surface-container-lowest rounded-2xl p-space-lg flex flex-col justify-between shadow-sm border border-outline-variant/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
                 >
                   <div>
@@ -555,8 +534,6 @@ export default function HomePage() {
                 <motion.div
                   variants={fadeUp}
                   custom={1}
-                  ref={duoSpotlight.ref}
-                  onMouseMove={duoSpotlight.handleMouseMove}
                   className="card-spotlight bg-surface-container-lowest rounded-2xl p-space-lg flex flex-col justify-between shadow-sm border border-outline-variant/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
                 >
                   <div>

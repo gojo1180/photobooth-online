@@ -8,6 +8,7 @@ export function useCamera() {
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [isMirrored, setIsMirrored] = useState(true);
   const [isReady, setIsReady] = useState(false);
+  const [requestVersion, setRequestVersion] = useState(0);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -58,7 +59,7 @@ export function useCamera() {
         activeStream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [facingMode]);
+  }, [facingMode, requestVersion]);
 
   const stopCamera = useCallback(() => {
     if (stream) {
@@ -78,6 +79,12 @@ export function useCamera() {
 
   const toggleMirror = useCallback(() => {
     setIsMirrored((prev) => !prev);
+  }, []);
+
+  const retryCamera = useCallback(() => {
+    setError(null);
+    setIsReady(false);
+    setRequestVersion((version) => version + 1);
   }, []);
 
   // Capture current video frame to base64 JPEG
@@ -111,6 +118,7 @@ export function useCamera() {
     stopCamera,
     toggleFacingMode,
     toggleMirror,
+    retryCamera,
     captureSnapshot,
   };
 }

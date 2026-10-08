@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useRoomStore, type UserRole } from '@/stores/useRoomStore';
 import { WS_BASE_URL } from '@/lib/api';
 import { createClient } from '@/lib/supabase/client';
@@ -25,11 +26,17 @@ interface SignalEnvelope {
     | 'PEER_JOINED'
     | 'PEER_READY'
     | 'PEER_LEFT'
-    | 'ROOM_STATE';
+    | 'ROOM_STATE'
+    | 'ROOM_FULL';
   sender_id: string;
-  payload?: any;
+  payload?: {
+    sdp?: RTCSessionDescriptionInit;
+    candidate?: RTCIceCandidateInit;
+  };
   peers_count?: number;
 }
+
+export type SignalingMode = 'websocket' | 'supabase' | null;
 
 export function useWebRTC(
   roomId: string | null,
@@ -42,6 +49,9 @@ export function useWebRTC(
   const senderIdRef = useRef<string>('');
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   const isNegotiatingRef = useRef(false);
+  const [connectionAttempt, setConnectionAttempt] = useState(0);
+  const [signalingMode, setSignalingMode] = useState<SignalingMode>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const {
     setPeerStatus,
@@ -77,7 +87,9 @@ export function useWebRTC(
 
   // Main WebRTC & WebSocket signaling lifecycle
   useEffect(() => {
-    if (!roomId || !role) return;
+    if (!roomId || !role || !localStream) return;
+
+    let disposed = false;
 
     if (!senderIdRef.current) {
       senderIdRef.current =
@@ -151,9 +163,13 @@ export function useWebRTC(
 
       dc.onopen = () => {
         console.log('[WebRTC] Host RTCDataChannel opened');
+        setConnectionError(null);
         setPeerStatus('connected');
       };
-      dc.onclose = () => console.log('[WebRTC] Host RTCDataChannel closed');
+      dc.onclose = () => {
+        console.log('[WebRTC] Host RTCDataChannel closed');
+        if (!disposed) setPeerStatus('disconnected');
+      };
     } else {
       pc.ondatachannel = (event) => {
         console.log('[WebRTC] Guest received DataChannel from Host');
@@ -163,16 +179,21 @@ export function useWebRTC(
 
         dc.onopen = () => {
           console.log('[WebRTC] Guest RTCDataChannel opened');
+          setConnectionError(null);
           setPeerStatus('connected');
         };
-        dc.onclose = () => console.log('[WebRTC] Guest RTCDataChannel closed');
+        dc.onclose = () => {
+          console.log('[WebRTC] Guest RTCDataChannel closed');
+          if (!disposed) setPeerStatus('disconnected');
+        };
       };
     }
 
     // 3. Connect to Go Backend WebSocket Hub
     const wsUrl = `${WS_BASE_URL}/rooms/${encodeURIComponent(cleanRoomCode)}?sender_id=${mySenderId}`;
     let ws: WebSocket | null = null;
-    let fallbackChannel: any = null;
+    let fallbackChannel: RealtimeChannel | null = null;
+    let shouldFallback = true;
 
     try {
       ws = new WebSocket(wsUrl);
@@ -220,6 +241,7 @@ export function useWebRTC(
     const sendOffer = async () => {
       if (role !== 'host' || !pcRef.current) return;
       if (isNegotiatingRef.current) return;
+      if (pcRef.current.signalingState !== 'stable') return;
       isNegotiatingRef.current = true;
 
       try {
@@ -256,6 +278,8 @@ export function useWebRTC(
     if (ws) {
       ws.onopen = () => {
         console.log(`[Signaling WS] Connected to Go Backend room: ${cleanRoomCode}`);
+        setSignalingMode('websocket');
+        setConnectionError(null);
         setPeerStatus('connecting');
 
         // Announce presence
@@ -309,6 +333,14 @@ export function useWebRTC(
               console.log('[Signaling WS] Remote peer disconnected');
               setRemoteStream(null);
               setPeerStatus('disconnected');
+              break;
+            }
+
+            case 'ROOM_FULL': {
+              shouldFallback = false;
+              setConnectionError('Room sudah berisi Host dan Guest. Tidak ada slot koneksi tambahan.');
+              setPeerStatus('error');
+              ws?.close();
               break;
             }
 
@@ -371,11 +403,16 @@ export function useWebRTC(
 
       ws.onerror = (err) => {
         console.warn('[Signaling WS] Go backend WS error, activating fallback:', err);
+        setConnectionError('Koneksi studio utama terputus. Mengalihkan ke jalur cadangan…');
         initSupabaseFallback();
       };
 
       ws.onclose = () => {
         console.log('[Signaling WS] Disconnected from Go backend room hub');
+        if (!disposed && !fallbackChannel && shouldFallback) {
+          setPeerStatus('disconnected');
+          initSupabaseFallback();
+        }
       };
     } else {
       initSupabaseFallback();
@@ -386,32 +423,37 @@ export function useWebRTC(
       if (fallbackChannel) return;
       console.log('[WebRTC] Starting Supabase Realtime fallback signaling...');
       const supabase = createClient();
-      fallbackChannel = supabase.channel(`room_${cleanRoomCode}`, {
+      setSignalingMode('supabase');
+      const channel = supabase.channel(`room_${cleanRoomCode}`, {
         config: { broadcast: { self: false } },
       });
+      fallbackChannel = channel;
 
-      fallbackChannel
-        .on('broadcast', { event: 'sdp-offer' }, async ({ payload }: any) => {
+      channel
+        .on('broadcast', { event: 'peer-ready' }, async () => {
+          if (role === 'host') await sendOffer();
+        })
+        .on('broadcast', { event: 'sdp-offer' }, async ({ payload }: { payload: { sdp: RTCSessionDescriptionInit } }) => {
           if (role === 'guest' && pcRef.current) {
             await pcRef.current.setRemoteDescription(new RTCSessionDescription(payload.sdp));
             await flushPendingCandidates();
             const answer = await pcRef.current.createAnswer();
             await pcRef.current.setLocalDescription(answer);
 
-            fallbackChannel.send({
+            channel.send({
               type: 'broadcast',
               event: 'sdp-answer',
               payload: { sdp: answer },
             });
           }
         })
-        .on('broadcast', { event: 'sdp-answer' }, async ({ payload }: any) => {
+        .on('broadcast', { event: 'sdp-answer' }, async ({ payload }: { payload: { sdp: RTCSessionDescriptionInit } }) => {
           if (role === 'host' && pcRef.current) {
             await pcRef.current.setRemoteDescription(new RTCSessionDescription(payload.sdp));
             await flushPendingCandidates();
           }
         })
-        .on('broadcast', { event: 'ice-candidate' }, async ({ payload }: any) => {
+        .on('broadcast', { event: 'ice-candidate' }, async ({ payload }: { payload: { candidate: RTCIceCandidateInit; senderRole?: UserRole } }) => {
           if (pcRef.current && payload.candidate && payload.senderRole !== role) {
             try {
               if (pcRef.current.remoteDescription) {
@@ -429,18 +471,28 @@ export function useWebRTC(
             setPeerStatus('connecting');
             if (role === 'host') {
               await sendOffer();
+            } else {
+              await channel.send({
+                type: 'broadcast',
+                event: 'peer-ready',
+                payload: { senderRole: role },
+              });
             }
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            setConnectionError('Tidak dapat tersambung ke layanan sinkronisasi room.');
+            setPeerStatus('error');
           }
         });
     }
 
     return () => {
+      disposed = true;
       if (fallbackChannel) {
         fallbackChannel.unsubscribe();
       }
       cleanup();
     };
-  }, [roomId, role, cleanup, setDataChannel, setPeerStatus, setRemoteStream]);
+  }, [connectionAttempt, localStream, roomId, role, cleanup, setDataChannel, setPeerStatus, setRemoteStream]);
 
   // Synchronize localStream tracks without tearing down WebRTC or WebSocket
   useEffect(() => {
@@ -461,7 +513,18 @@ export function useWebRTC(
     });
   }, [localStream]);
 
+  const retryConnection = useCallback(() => {
+    cleanup();
+    setConnectionError(null);
+    setSignalingMode(null);
+    setPeerStatus('connecting');
+    setConnectionAttempt((attempt) => attempt + 1);
+  }, [cleanup, setPeerStatus]);
+
   return {
     cleanup,
+    retryConnection,
+    signalingMode,
+    connectionError,
   };
 }

@@ -1,5 +1,12 @@
 import { create } from 'zustand';
 
+const createDefaultDateStamp = () =>
+  new Date().toLocaleDateString('en-US', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+  });
+
 export type WizardStep = 'SELECT_LAYOUT' | 'CAPTURE' | 'CUSTOMIZE' | 'EXPORT';
 
 export interface FrameSlot {
@@ -54,18 +61,18 @@ export interface PhotoboothStore {
 
 export const usePhotoboothStore = create<PhotoboothStore>((set) => ({
   step: 'SELECT_LAYOUT',
-  selectedLayoutId: 'layout_4_grid',
-  expectedPhotoCount: 4,
+  selectedLayoutId: null,
+  expectedPhotoCount: 0,
   countdownSeconds: 3,
   soundEnabled: true,
   capturedPhotos: [],
   selectedFrame: null,
   activeFilter: 'natural',
   isCapturing: false,
-  cardCaption: 'Memories with Bestie',
+  cardCaption: 'Scribblepie Keepsake',
   showDateStamp: true,
-  dateStampText: 'Scribblepie Studio • Oct 24, 2025',
-  frameThemeKey: 'gold-cobalt',
+  dateStampText: createDefaultDateStamp(),
+  frameThemeKey: 'cream',
 
   setStep: (step) => set({ step }),
 
@@ -110,17 +117,17 @@ export const usePhotoboothStore = create<PhotoboothStore>((set) => ({
   resetSession: () =>
     set({
       step: 'SELECT_LAYOUT',
-      selectedLayoutId: 'layout_4_grid',
-      expectedPhotoCount: 4,
+      selectedLayoutId: null,
+      expectedPhotoCount: 0,
       countdownSeconds: 3,
       soundEnabled: true,
       capturedPhotos: [],
       selectedFrame: null,
       activeFilter: 'natural',
       isCapturing: false,
-      cardCaption: 'Memories with Bestie',
+      cardCaption: 'Scribblepie Keepsake',
       showDateStamp: true,
-      dateStampText: 'Scribblepie Studio • Oct 24, 2025',
-      frameThemeKey: 'gold-cobalt',
+      dateStampText: createDefaultDateStamp(),
+      frameThemeKey: 'cream',
     }),
 }));

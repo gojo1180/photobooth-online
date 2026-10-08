@@ -6,6 +6,7 @@ import { usePhotoboothStore } from '@/stores/usePhotoboothStore';
 import { useRoomStore } from '@/stores/useRoomStore';
 import { useGifCompiler } from '@/hooks/useGifCompiler';
 import { stopAllMediaStreams } from '@/hooks/useCamera';
+import { PHOTO_FILTERS } from '@/lib/konva-helpers';
 import { Download, Film, Printer, Trash2, CheckCircle2, Loader2 } from 'lucide-react';
 
 interface ExportActionsProps {
@@ -14,15 +15,20 @@ interface ExportActionsProps {
 
 export function ExportActions({ onExportPng }: ExportActionsProps) {
   const router = useRouter();
-  const { capturedPhotos, resetSession } = usePhotoboothStore();
-  const { compileGif, isCompiling, progress } = useGifCompiler();
+  const { capturedPhotos, activeFilter, resetSession } = usePhotoboothStore();
+  const { compileGif, isCompiling, progress, error: gifError } = useGifCompiler();
 
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   // 1. Download Composite HD PNG
   const handleDownloadPng = () => {
+    setExportError(null);
     const dataUrl = onExportPng();
-    if (!dataUrl) return;
+    if (!dataUrl) {
+      setExportError('Your final print is still rendering. Please wait a moment and try again.');
+      return;
+    }
 
     const link = document.createElement('a');
     link.download = `photobooth_y2k_${Date.now()}.png`;
@@ -37,12 +43,16 @@ export function ExportActions({ onExportPng }: ExportActionsProps) {
   const handleCompileGif = async () => {
     if (capturedPhotos.length === 0) return;
 
-    const url = await compileGif(capturedPhotos, { delay: 600 });
+    const url = await compileGif(capturedPhotos, {
+      delay: 600,
+      cssFilter: (PHOTO_FILTERS[activeFilter] || PHOTO_FILTERS.natural).cssFilter,
+    });
     if (url) {
       const link = document.createElement('a');
       link.download = `photobooth_animated_${Date.now()}.gif`;
       link.href = url;
       link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
   };
 
@@ -109,7 +119,7 @@ export function ExportActions({ onExportPng }: ExportActionsProps) {
           ) : (
             <>
               <Film className="w-4 h-4" />
-              <span>Create Animated GIF</span>
+              <span>Create Filtered Pose GIF</span>
             </>
           )}
         </button>
@@ -143,6 +153,18 @@ export function ExportActions({ onExportPng }: ExportActionsProps) {
             style={{ width: `${progress}%` }}
           />
         </div>
+      )}
+
+      {exportError && (
+        <p role="alert" className="mb-3 rounded-xl bg-error-container px-3 py-2 text-xs font-semibold text-on-error-container">
+          {exportError}
+        </p>
+      )}
+
+      {gifError && (
+        <p role="alert" className="mb-3 rounded-xl bg-error-container px-3 py-2 text-xs font-semibold text-on-error-container">
+          GIF export failed: {gifError}
+        </p>
       )}
 
       {/* Zero Server Storage Badge */}

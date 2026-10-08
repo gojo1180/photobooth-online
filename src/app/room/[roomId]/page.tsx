@@ -9,13 +9,14 @@ import { ScreenFlash } from '@/components/common/ScreenFlash';
 import { CountdownOverlay } from '@/components/common/CountdownOverlay';
 import { CanvasStage, type CanvasStageRef } from '@/components/photobooth/CanvasStage';
 import { FramePicker } from '@/components/photobooth/FramePicker';
+import { FilterBar } from '@/components/photobooth/FilterBar';
 import { ExportActions } from '@/components/photobooth/ExportActions';
 import { useCamera } from '@/hooks/useCamera';
 import { useWebRTC } from '@/hooks/useWebRTC';
 import { useSyncShutter } from '@/hooks/useSyncShutter';
 import { useAuth } from '@/hooks/useAuth';
 import { useRoomStore, type RoomStep, type UserRole } from '@/stores/useRoomStore';
-import { usePhotoboothStore } from '@/stores/usePhotoboothStore';
+import { usePhotoboothStore, type FrameItem } from '@/stores/usePhotoboothStore';
 import { getLayouts, getRoom } from '@/lib/api';
 import {
   Copy,
@@ -23,16 +24,16 @@ import {
   Camera,
   ArrowRight,
   RotateCcw,
-  LayoutGrid,
   Users,
   Radio,
-  Wifi,
   Sparkles,
   CheckCircle2,
   Video,
   Timer,
   Volume2,
   VolumeX,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 
 interface PageProps {
@@ -115,9 +116,11 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
     expectedPhotoCount,
     selectLayout,
     selectedFrame,
+    selectFrame,
     capturedPhotos,
     pushCapturedPhoto,
     activeFilter,
+    setActiveFilter,
     resetSession,
     countdownSeconds: timerDuration,
     setCountdownSeconds: setTimerDuration,
@@ -129,6 +132,7 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [showFlash, setShowFlash] = useState(false);
+  const [roomAccessError, setRoomAccessError] = useState<string | null>(null);
 
   // Restore/detect user role if entering directly or on reload
   useEffect(() => {
@@ -143,21 +147,16 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
         if (role !== cachedRole) {
           setRoom(roomId, cleanCode, cachedRole);
         }
-        return;
       }
     }
 
-    // If role already set in store (e.g. from lobby), preserve it
-    if (role) return;
-
     if (!isAuthenticated || !user) return;
+    const currentUserId = user.id;
 
     async function detectRole() {
       try {
         const room = await getRoom(cleanCode);
-        // Only creator in original creating tab has 'host' in sessionStorage.
-        // Any other tab or visitor joining this room is always a GUEST.
-        const targetRole: UserRole = 'guest';
+        const targetRole: UserRole = room.host_user_id === currentUserId ? 'host' : 'guest';
         setRoom(roomId, cleanCode, targetRole);
         if (typeof window !== 'undefined') {
           sessionStorage.setItem(`room_role_${roomId.toLowerCase()}`, targetRole);
@@ -165,9 +164,7 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
         }
       } catch (err) {
         console.warn('[Room] Failed to detect role from backend:', err);
-        if (!role) {
-          setRoom(roomId, cleanCode, 'guest');
-        }
+        setRoomAccessError('Room tidak ditemukan, sudah kedaluwarsa, atau telah penuh.');
       }
     }
 
@@ -203,8 +200,33 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
     fetchBackendLayouts();
   }, []);
 
-  const { stream: localStream } = useCamera();
-  useWebRTC(roomId, role, localStream);
+  // Solo mode requires an explicit layout choice, while an online room needs a
+  // deterministic starting layout so host and guest can initialize capture.
+  useEffect(() => {
+    if (!selectedLayoutId && layouts.length > 0) {
+      selectLayout(layouts[0].id, layouts[0].poses);
+    }
+  }, [layouts, selectLayout, selectedLayoutId]);
+
+  const {
+    stream: localStream,
+    isReady: isCameraReady,
+    error: cameraError,
+    retryCamera,
+  } = useCamera();
+  const {
+    retryConnection,
+    signalingMode,
+    connectionError,
+  } = useWebRTC(roomId, role, localStream);
+
+  const isDataChannelReady = dataChannel?.readyState === 'open';
+  const isCompanionConnected =
+    peerStatus === 'connected' && Boolean(remoteStream) && isDataChannelReady;
+  const hasCompleteCapture =
+    expectedPhotoCount > 0 && capturedPhotos.length >= expectedPhotoCount;
+  const canStartSession =
+    role === 'host' && isCameraReady && isCompanionConnected && Boolean(selectedLayoutId);
 
   const stageRef = useRef<CanvasStageRef | null>(null);
   const dualGridRef = useRef<DualCameraGridRef | null>(null);
@@ -226,17 +248,21 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
 
   // Synchronized Snapshot Capture
   const handleSynchronizedCapture = useCallback(() => {
+    if (capturedPhotos.length >= expectedPhotoCount || !remoteStream) return;
+
     if (dualGridRef.current) {
       const dualSnap = dualGridRef.current.captureDualSnapshot();
       if (dualSnap) {
         pushCapturedPhoto(dualSnap);
       }
     }
-  }, [pushCapturedPhoto]);
+  }, [capturedPhotos.length, expectedPhotoCount, pushCapturedPhoto, remoteStream]);
 
   const { isCountdownActive, countdownSeconds, triggerSynchronizedShutter } = useSyncShutter({
     onCapture: handleSynchronizedCapture,
     duration: timerDuration,
+    soundEnabled,
+    canTrigger: role === 'host' && isCameraReady && isCompanionConnected && !hasCompleteCapture,
     onFlash: () => {
       setShowFlash(true);
       setTimeout(() => setShowFlash(false), 450);
@@ -246,6 +272,11 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
   // Navigate room step synchronized across DataChannel
   const navigateRoomStep = useCallback(
     (nextStep: RoomStep) => {
+      if (role !== 'host') return;
+      if (nextStep === 'CAPTURE' && !canStartSession) return;
+      if ((nextStep === 'CUSTOMIZE' || nextStep === 'EXPORT') && !hasCompleteCapture) return;
+      if (nextStep === 'EXPORT' && !selectedFrame) return;
+
       setRoomStep(nextStep);
       if (dataChannel && dataChannel.readyState === 'open') {
         dataChannel.send(
@@ -256,7 +287,7 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
         );
       }
     },
-    [dataChannel, setRoomStep]
+    [canStartSession, dataChannel, hasCompleteCapture, role, selectedFrame, setRoomStep]
   );
 
   // Host broadcasts layout selection to Guest
@@ -292,13 +323,32 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
 
     const handleDataMessage = (event: MessageEvent) => {
       try {
-        const message = JSON.parse(event.data);
-        if (message.type === 'SET_ROOM_STEP') {
-          setRoomStep(message.step);
-        } else if (message.type === 'SELECT_LAYOUT') {
-          selectLayout(message.layoutId, message.poses);
-        } else if (message.type === 'SET_TIMER') {
+        const message = JSON.parse(event.data) as {
+          type?: string;
+          step?: RoomStep;
+          layoutId?: string;
+          poses?: number;
+          duration?: number;
+          frame?: FrameItem | null;
+          filter?: string;
+        };
+        if (role !== 'guest') return;
+
+        if (message.type === 'RESET_SESSION') {
+          resetSession();
+          setRoomStep('WAITING');
+        } else if (message.type === 'SET_ROOM_STEP') {
+          if (message.step) setRoomStep(message.step);
+        } else if (message.type === 'SELECT_LAYOUT' && message.layoutId && message.poses) {
+          if (message.layoutId !== selectedLayoutId || message.poses !== expectedPhotoCount) {
+            selectLayout(message.layoutId, message.poses);
+          }
+        } else if (message.type === 'SET_TIMER' && message.duration) {
           setTimerDuration(message.duration);
+        } else if (message.type === 'SELECT_FRAME') {
+          selectFrame(message.frame ?? null);
+        } else if (message.type === 'SET_FILTER' && message.filter) {
+          setActiveFilter(message.filter);
         }
       } catch (e) {
         console.error('Error handling data channel message:', e);
@@ -307,7 +357,18 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
 
     dataChannel.addEventListener('message', handleDataMessage);
     return () => dataChannel.removeEventListener('message', handleDataMessage);
-  }, [dataChannel, selectLayout, setRoomStep, setTimerDuration]);
+  }, [
+    dataChannel,
+    expectedPhotoCount,
+    resetSession,
+    role,
+    selectFrame,
+    selectLayout,
+    selectedLayoutId,
+    setActiveFilter,
+    setRoomStep,
+    setTimerDuration,
+  ]);
 
   // Sync state to newly connected peer when channel opens
   useEffect(() => {
@@ -329,6 +390,24 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
           duration: timerDuration,
         })
       );
+      dataChannel.send(
+        JSON.stringify({
+          type: 'SET_ROOM_STEP',
+          step: roomStep,
+        })
+      );
+      dataChannel.send(
+        JSON.stringify({
+          type: 'SELECT_FRAME',
+          frame: selectedFrame,
+        })
+      );
+      dataChannel.send(
+        JSON.stringify({
+          type: 'SET_FILTER',
+          filter: activeFilter,
+        })
+      );
     };
 
     if (dataChannel.readyState === 'open') {
@@ -337,7 +416,16 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
       dataChannel.addEventListener('open', handleOpen);
       return () => dataChannel.removeEventListener('open', handleOpen);
     }
-  }, [dataChannel, role, selectedLayoutId, expectedPhotoCount, timerDuration]);
+  }, [
+    activeFilter,
+    dataChannel,
+    expectedPhotoCount,
+    role,
+    roomStep,
+    selectedFrame,
+    selectedLayoutId,
+    timerDuration,
+  ]);
 
   const handleCopyCode = () => {
     if (typeof window !== 'undefined') {
@@ -361,8 +449,6 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
     }
     return null;
   };
-
-  const isCompanionConnected = peerStatus === 'connected' || !!remoteStream;
 
   // Unauthenticated screen
   if (!isAuthLoading && !isAuthenticated) {
@@ -392,6 +478,29 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
     );
   }
 
+  if (roomAccessError) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background">
+        <Navbar />
+        <main className="flex-1 max-w-md w-full mx-auto px-4 pt-36 pb-16 flex items-center justify-center">
+          <div className="w-full bg-surface-container-lowest p-8 rounded-3xl border border-outline-variant/30 text-center shadow-lg">
+            <AlertTriangle className="w-9 h-9 mx-auto mb-4 text-amber-600" />
+            <h1 className="font-serif text-2xl font-bold text-primary mb-2">Room Tidak Tersedia</h1>
+            <p className="text-xs text-on-surface-variant mb-6 leading-relaxed">{roomAccessError}</p>
+            <Link
+              href="/room/lobby"
+              className="w-full py-3.5 rounded-2xl bg-primary text-on-primary text-xs font-bold uppercase tracking-wider hover:bg-primary-container transition-all flex items-center justify-center gap-2 shadow-xs"
+            >
+              Kembali ke Lobby
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   // ==========================================================================
   // STEP 1: WAITING ROOM & FORMAT SELECTION (Matching Solo Mode Step 1)
   // ==========================================================================
@@ -400,7 +509,7 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
       <div className="flex flex-col min-h-screen bg-background text-on-surface">
         <Navbar />
 
-        <main className="w-full pt-20 bg-background">
+        <main className="w-full pt-16 md:pt-20 bg-background">
           {/* Top Hero Banner */}
           <section className="relative w-full bg-secondary-container text-on-secondary-container pt-8 sm:pt-12 pb-32 sm:pb-36 md:pb-40 overflow-hidden">
             <div className="max-w-5xl mx-auto px-margin text-center relative z-20 flex flex-col items-center">
@@ -498,12 +607,32 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
                   />
                   <span>
                     {isCompanionConnected
-                      ? 'Companion Connected!'
+                      ? `Companion Connected • ${signalingMode === 'supabase' ? 'Backup' : 'Studio'} Link`
                       : 'Waiting for companion to join...'}
                   </span>
                 </div>
               </div>
             </div>
+
+            {(connectionError || peerStatus === 'error' || peerStatus === 'disconnected') && (
+              <div className="max-w-4xl mx-auto mb-8 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3" role="status">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-extrabold uppercase tracking-wider">Koneksi Duo perlu dipulihkan</p>
+                    <p className="text-xs mt-0.5">{connectionError || 'Koneksi dengan companion terputus.'}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={retryConnection}
+                  className="px-4 py-2 rounded-xl bg-amber-900 text-white text-[11px] font-bold uppercase tracking-wider flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Sambungkan Ulang
+                </button>
+              </div>
+            )}
 
             {/* Dual Camera Stream Check Area */}
             <div className="mb-12">
@@ -526,8 +655,14 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
                     <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
                       <Video className="w-4 h-4" /> Your Camera ({role === 'host' ? 'Host' : 'Guest'})
                     </span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-800">
-                      LIVE
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      isCameraReady
+                        ? 'bg-green-100 text-green-800'
+                        : cameraError
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {isCameraReady ? 'LIVE' : cameraError ? 'BLOCKED' : 'STARTING'}
                     </span>
                   </div>
                   <div className="relative aspect-[4/3] bg-neutral-900 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
@@ -539,6 +674,18 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
                         muted
                         className="w-full h-full object-cover scale-x-[-1]"
                       />
+                    ) : cameraError ? (
+                      <div className="flex flex-col items-center gap-3 text-white/70 text-xs text-center px-6">
+                        <AlertTriangle className="w-8 h-8 text-amber-300" />
+                        <span>{cameraError}</span>
+                        <button
+                          type="button"
+                          onClick={retryCamera}
+                          className="px-4 py-2 rounded-xl bg-white text-neutral-900 font-bold uppercase tracking-wider cursor-pointer"
+                        >
+                          Coba Kamera Lagi
+                        </button>
+                      </div>
                     ) : (
                       <div className="flex flex-col items-center gap-2 text-white/50 text-xs">
                         <Camera className="w-8 h-8 animate-pulse" />
@@ -720,25 +867,28 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
                 <>
                   <button
                     type="button"
+                    disabled={!canStartSession}
                     onClick={() => navigateRoomStep('CAPTURE')}
-                    className={`w-full sm:w-auto px-10 py-4 rounded-2xl text-xs font-extrabold uppercase tracking-widest shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 ${
-                      isCompanionConnected
+                    className={`w-full sm:w-auto px-10 py-4 rounded-2xl text-xs font-extrabold uppercase tracking-widest shadow-md flex items-center justify-center gap-2 transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
+                      canStartSession
                         ? 'bg-primary hover:bg-primary-container text-on-primary ring-2 ring-primary/40'
-                        : 'bg-secondary hover:bg-secondary/90 text-on-secondary'
+                        : 'bg-surface-container text-on-surface-variant'
                     }`}
                   >
                     <Camera className="w-5 h-5" />
                     <span>
-                      {isCompanionConnected
+                      {canStartSession
                         ? 'MULAI SESI FOTO (DUAL CAMERA)'
-                        : 'MULAI SESI FOTO (MENUNGGU TEMAN)'}
+                        : !isCameraReady
+                          ? 'MENUNGGU KAMERA ANDA'
+                          : 'MENUNGGU COMPANION'}
                     </span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                   <p className="text-[11px] text-on-surface-variant">
-                    {isCompanionConnected
+                    {canStartSession
                       ? 'Kamera Anda dan teman sudah siap! Klik tombol di atas untuk membuka sesi foto.'
-                      : 'Anda dapat menunggu teman bergabung melalui kode room, atau langsung memulai sesi foto.'}
+                      : 'Sesi Duo baru dapat dimulai setelah kedua kamera dan koneksi sinkronisasi siap.'}
                   </p>
                 </>
               ) : (
@@ -747,7 +897,7 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
                     <Sparkles className="w-4 h-4 text-on-secondary-fixed" />
                   </div>
                   <p className="font-serif font-bold text-lg text-primary">
-                    Terhubung dengan Host!
+                    {isCompanionConnected ? 'Terhubung dengan Host!' : 'Menunggu koneksi Host…'}
                   </p>
                   <p className="text-xs text-on-surface-variant max-w-sm">
                     Menunggu host memilih format dan meluncurkan sesi pengambilan foto...
@@ -772,7 +922,7 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
         <Navbar />
         <ScreenFlash isActive={showFlash} />
 
-        <main className="w-full pt-20 bg-background">
+        <main className="w-full pt-16 md:pt-20 bg-background">
           {/* Top Hero Banner */}
           <section className="relative w-full bg-primary text-on-primary pt-8 sm:pt-10 pb-24 sm:pb-28 overflow-hidden">
             <div className="max-w-5xl mx-auto px-margin text-center relative z-20 flex flex-col items-center">
@@ -822,6 +972,26 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
 
           {/* Capture Workspace */}
           <section className="max-w-4xl mx-auto px-4 md:px-6 py-6 flex flex-col items-center gap-6">
+            {!isCompanionConnected && (
+              <div className="w-full rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3" role="alert">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-extrabold uppercase tracking-wider">Sesi dijeda</p>
+                    <p className="text-xs mt-0.5">Shutter dinonaktifkan sampai koneksi kedua kamera pulih.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={retryConnection}
+                  className="px-4 py-2 rounded-xl bg-amber-900 text-white text-[11px] font-bold uppercase tracking-wider flex items-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Sambungkan Ulang
+                </button>
+              </div>
+            )}
+
             {/* Dual Camera Grid with Side-by-Side Views */}
             <DualCameraGrid
               ref={dualGridRef}
@@ -848,15 +1018,27 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  disabled={isCountdownActive || capturedPhotos.length >= expectedPhotoCount}
+                  disabled={
+                    role !== 'host' ||
+                    !isCameraReady ||
+                    !isCompanionConnected ||
+                    isCountdownActive ||
+                    hasCompleteCapture
+                  }
                   onClick={triggerSynchronizedShutter}
-                  className="px-8 py-3.5 rounded-2xl bg-primary text-on-primary text-xs font-extrabold uppercase tracking-widest shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 hover:bg-primary-container active:scale-95 transition-all"
+                  className="px-8 py-3.5 rounded-2xl bg-primary text-on-primary text-xs font-extrabold uppercase tracking-widest shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-container active:scale-95 transition-all"
                 >
                   <Camera className="w-4 h-4" />
-                  <span>{isCountdownActive ? 'Counting...' : 'SYNC SNAP!'}</span>
+                  <span>
+                    {role !== 'host'
+                      ? 'HOST CONTROLS SHUTTER'
+                      : isCountdownActive
+                        ? 'COUNTING…'
+                        : 'SYNC SNAP!'}
+                  </span>
                 </button>
 
-                {capturedPhotos.length > 0 && (
+                {role === 'host' && hasCompleteCapture && (
                   <button
                     type="button"
                     onClick={() => navigateRoomStep('CUSTOMIZE')}
@@ -907,7 +1089,7 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
       <div className="flex flex-col min-h-screen bg-background text-on-surface">
         <Navbar />
 
-        <main className="w-full pt-20 bg-background">
+        <main className="w-full pt-16 md:pt-20 bg-background">
           {/* Top Hero Banner */}
           <section className="relative w-full bg-secondary-container text-on-secondary pt-8 sm:pt-10 pb-24 sm:pb-28 overflow-hidden">
             <div className="max-w-5xl mx-auto px-margin text-center relative z-20 flex flex-col items-center">
@@ -972,32 +1154,43 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
                 />
               </div>
 
-              {/* Right: Frame Picker & Controls */}
-              <div className="lg:col-span-5 flex flex-col gap-6">
-                <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/30 p-6 shadow-xs">
-                  <FramePicker />
-                </div>
+                {/* Right: Frame Picker & Controls */}
+                <div className="lg:col-span-5 flex flex-col gap-6">
+                  <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/30 p-6 shadow-xs">
+                    <FramePicker readOnly={role !== 'host'} />
+                    <div className="mt-6 pt-6 border-t border-outline-variant/30">
+                      <FilterBar readOnly={role !== 'host'} />
+                    </div>
+                  </div>
 
-                <div className="flex flex-col gap-3">
-                  <button
-                    type="button"
-                    onClick={() => navigateRoomStep('EXPORT')}
-                    className="w-full py-4 rounded-2xl bg-primary hover:bg-primary-container text-on-primary text-xs font-extrabold uppercase tracking-widest shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
-                  >
-                    <span>Proceed to Print &amp; Export</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+                  {role === 'host' ? (
+                    <div className="flex flex-col gap-3">
+                      <button
+                        type="button"
+                        disabled={!selectedFrame}
+                        onClick={() => navigateRoomStep('EXPORT')}
+                        className="w-full py-4 rounded-2xl bg-primary hover:bg-primary-container text-on-primary text-xs font-extrabold uppercase tracking-widest shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all"
+                      >
+                        <span>{selectedFrame ? 'Proceed to Print & Export' : 'Select a Frame to Continue'}</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
 
-                  <button
-                    type="button"
-                    onClick={() => navigateRoomStep('CAPTURE')}
-                    className="w-full py-3.5 rounded-2xl border border-outline-variant/40 bg-surface-container-lowest hover:bg-surface-container-low text-on-surface text-xs font-bold uppercase tracking-wider shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
-                  >
-                    <RotateCcw className="w-4 h-4 text-primary" />
-                    <span>Retake Snapshots</span>
-                  </button>
+                      <button
+                        type="button"
+                        onClick={() => navigateRoomStep('CAPTURE')}
+                        className="w-full py-3.5 rounded-2xl border border-outline-variant/40 bg-surface-container-lowest hover:bg-surface-container-low text-on-surface text-xs font-bold uppercase tracking-wider shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
+                      >
+                        <RotateCcw className="w-4 h-4 text-primary" />
+                        <span>Retake Snapshots</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-4 text-center">
+                      <p className="text-xs font-bold text-primary">Host sedang menyusun hasil akhir</p>
+                      <p className="text-[11px] text-on-surface-variant mt-1">Pilihan frame dan filter akan diperbarui otomatis.</p>
+                    </div>
+                  )}
                 </div>
-              </div>
             </div>
           </section>
         </main>
@@ -1014,7 +1207,7 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
     <div className="flex flex-col min-h-screen bg-background text-on-surface">
       <Navbar />
 
-      <main className="w-full pt-20 bg-background">
+      <main className="w-full pt-16 md:pt-20 bg-background">
         {/* Top Hero Banner */}
         <section className="relative w-full bg-secondary-container text-on-secondary pt-8 sm:pt-10 pb-24 sm:pb-28 overflow-hidden">
           <div className="max-w-5xl mx-auto px-margin text-center relative z-20 flex flex-col items-center">
@@ -1027,7 +1220,7 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
               Your Duo Keepsake is Ready
             </h1>
             <p className="text-xs sm:text-sm text-on-secondary-container/90 max-w-md mt-1">
-              Download your archival 300 DPI high-resolution prints or print directly from your browser.
+              Download your high-resolution browser render or print it directly.
             </p>
 
             {/* Stepper Pills */}
@@ -1062,7 +1255,7 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
         <section className="max-w-7xl mx-auto px-4 md:px-6 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Left: Composite Canvas Stage */}
-            <div className="lg:col-span-7 flex flex-col items-center">
+            <div className="print-output lg:col-span-7 flex flex-col items-center">
               <CanvasStage
                 ref={stageRef}
                 frame={selectedFrame}
@@ -1075,26 +1268,38 @@ export default function CollaborativeRoomPage({ params }: PageProps) {
             <div className="lg:col-span-5 flex flex-col gap-4">
               <ExportActions onExportPng={handleExportPng} />
 
-              <button
-                type="button"
-                onClick={() => navigateRoomStep('CUSTOMIZE')}
-                className="w-full py-3.5 rounded-2xl border border-outline-variant/40 bg-surface-container-lowest hover:bg-surface-container-low text-on-surface text-xs font-bold uppercase tracking-wider shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
-              >
-                <RotateCcw className="w-4 h-4 text-primary" />
-                <span>Back to Frame Editor</span>
-              </button>
+              {role === 'host' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => navigateRoomStep('CUSTOMIZE')}
+                    className="w-full py-3.5 rounded-2xl border border-outline-variant/40 bg-surface-container-lowest hover:bg-surface-container-low text-on-surface text-xs font-bold uppercase tracking-wider shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
+                  >
+                    <RotateCcw className="w-4 h-4 text-primary" />
+                    <span>Back to Frame Editor</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  resetSession();
-                  navigateRoomStep('WAITING');
-                }}
-                className="w-full py-3.5 rounded-2xl bg-secondary-container text-on-secondary-fixed hover:bg-secondary text-xs font-bold uppercase tracking-wider shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
-              >
-                <Users className="w-4 h-4" />
-                <span>Return to Waiting Room</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigateRoomStep('WAITING');
+                      if (dataChannel && dataChannel.readyState === 'open') {
+                        dataChannel.send(JSON.stringify({ type: 'RESET_SESSION' }));
+                      }
+                      resetSession();
+                    }}
+                    className="w-full py-3.5 rounded-2xl bg-secondary-container text-on-secondary-fixed hover:bg-secondary text-xs font-bold uppercase tracking-wider shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
+                  >
+                    <Users className="w-4 h-4" />
+                    <span>Return to Waiting Room</span>
+                  </button>
+                </>
+              ) : (
+                <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-4 text-center">
+                  <p className="text-xs font-bold text-primary">Unduh salinan Anda kapan saja</p>
+                  <p className="text-[11px] text-on-surface-variant mt-1">Host akan mengontrol perpindahan kembali ke editor atau waiting room.</p>
+                </div>
+              )}
             </div>
           </div>
         </section>

@@ -132,10 +132,9 @@ export function LayoutSelector() {
           });
 
           setFormats(merged);
-          // If previous selection isn't in backend list, select first available
-          if (!merged.some((m) => m.id === selectedFormat.id)) {
-            setSelectedFormat(merged[0]);
-          }
+          setSelectedFormat((current) =>
+            merged.find((format) => format.id === current.id) || merged[0]
+          );
         }
       } catch (err) {
         console.warn('Could not load layouts from backend API, using local definitions:', err);
@@ -173,7 +172,7 @@ export function LayoutSelector() {
         <div className="max-w-5xl mx-auto px-margin text-center relative z-20 flex flex-col items-center">
 
 
-          <h1 className="font-headline-lg text-headline-lg text-on-secondary-container uppercase tracking-tight max-w-2xl font-serif">
+          <h1 className="w-full break-words font-headline-lg text-headline-lg text-on-secondary-container uppercase tracking-tight max-w-2xl font-serif">
             SELECT PRINT LAYOUT
           </h1>
           <p className="font-body-lg text-body-lg text-on-secondary-container/90 mt-space-xs max-w-xl font-serif">
@@ -185,15 +184,15 @@ export function LayoutSelector() {
             <span className="bg-primary text-on-primary font-label-sm text-label-sm px-space-sm py-1 rounded-full shadow-xs font-bold uppercase">
               1. FORMAT
             </span>
-            <span className="material-symbols-outlined text-[16px] text-on-secondary-container/60">arrow_forward</span>
+            <span className="hidden sm:inline material-symbols-outlined text-[16px] text-on-secondary-container/60">arrow_forward</span>
             <span className="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm px-space-sm py-1 rounded-full uppercase font-medium">
               2. CAPTURE
             </span>
-            <span className="material-symbols-outlined text-[16px] text-on-secondary-container/60">arrow_forward</span>
+            <span className="hidden sm:inline material-symbols-outlined text-[16px] text-on-secondary-container/60">arrow_forward</span>
             <span className="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm px-space-sm py-1 rounded-full uppercase font-medium">
               3. EDIT &amp; FRAMES
             </span>
-            <span className="material-symbols-outlined text-[16px] text-on-secondary-container/60">arrow_forward</span>
+            <span className="hidden sm:inline material-symbols-outlined text-[16px] text-on-secondary-container/60">arrow_forward</span>
             <span className="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm px-space-sm py-1 rounded-full uppercase font-medium">
               4. PRINT &amp; EXPORT
             </span>
@@ -491,21 +490,21 @@ export function LayoutSelector() {
       </section>
 
       {/* SECTION 5: Sticky Action Dock Bar */}
-      <aside className="sticky bottom-4 z-40 max-w-4xl mx-auto w-full px-margin my-6">
+      <aside className="sticky bottom-3 sm:bottom-4 z-40 max-w-4xl mx-auto w-full px-3 sm:px-margin my-6">
         <div className="bg-surface-container-lowest text-on-surface rounded-xl p-space-sm sm:p-space-md shadow-xl flex flex-col sm:flex-row items-center justify-between gap-space-sm border border-outline-variant/30">
           {/* Current Selection Summary */}
           <div className="flex items-center gap-space-sm text-left w-full sm:w-auto">
             <div className="w-12 h-12 rounded-lg bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center shrink-0 shadow-xs border border-outline-variant/20">
               <span className="material-symbols-outlined text-[28px]">{selectedFormat.dockIcon}</span>
             </div>
-            <div>
+            <div className="min-w-0">
               <span className="font-label-sm text-label-sm uppercase tracking-wider text-secondary block font-bold">
                 READY TO STEP IN
               </span>
-              <div className="font-headline-md text-[18px] text-primary leading-tight font-bold font-serif">
+              <div className="truncate font-headline-md text-[15px] sm:text-[18px] text-primary leading-tight font-bold font-serif">
                 {selectedFormat.name} • {timerSeconds}s Interval
               </div>
-              <span className="font-body-sm text-body-sm text-on-surface-variant">
+              <span className="hidden sm:block font-body-sm text-body-sm text-on-surface-variant">
                 Camera viewfinder automatically adapts to this layout
               </span>
             </div>
@@ -516,7 +515,7 @@ export function LayoutSelector() {
             <button
               onClick={handleProceed}
               type="button"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md uppercase px-space-lg py-3.5 rounded-lg shadow-sm hover:shadow transition-all active:scale-[0.98] font-bold cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-container text-on-primary font-label-md text-[11px] sm:text-label-md uppercase px-4 sm:px-space-lg py-3.5 rounded-lg shadow-sm hover:shadow transition-all active:scale-[0.98] font-bold cursor-pointer"
             >
               <span>PROCEED TO CAMERA ({selectedFormat.poses} POSES)</span>
               <span className="material-symbols-outlined text-[18px]">photo_camera</span>

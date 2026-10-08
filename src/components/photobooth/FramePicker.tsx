@@ -5,16 +5,20 @@ import { usePhotoboothStore } from '@/stores/usePhotoboothStore';
 import { useFrameFilter } from '@/hooks/useFrameFilter';
 import { Sparkles, Check } from 'lucide-react';
 
-export function FramePicker() {
+interface FramePickerProps {
+  readOnly?: boolean;
+}
+
+export function FramePicker({ readOnly = false }: FramePickerProps) {
   const { selectedLayoutId, selectedFrame, selectFrame } = usePhotoboothStore();
   const { frames, isLoading } = useFrameFilter(selectedLayoutId);
 
   // Auto-select first frame if none currently selected
   useEffect(() => {
-    if (frames.length > 0 && !selectedFrame) {
+    if (frames.length > 0 && !selectedFrame && !readOnly) {
       selectFrame(frames[0]);
     }
-  }, [frames, selectedFrame, selectFrame]);
+  }, [frames, readOnly, selectedFrame, selectFrame]);
 
   return (
     <div className="w-full">
@@ -24,7 +28,7 @@ export function FramePicker() {
           Frame Templates
         </h3>
         <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-fixed border border-secondary/20 shadow-xs">
-          {frames.length} Available
+          {readOnly ? 'Host Controlled' : `${frames.length} Available`}
         </span>
       </div>
 
@@ -45,15 +49,17 @@ export function FramePicker() {
               <button
                 key={frame.id}
                 type="button"
+                disabled={readOnly}
                 onClick={() => selectFrame(frame)}
-                className={`relative flex-shrink-0 w-28 text-left rounded-xl p-2 bg-surface-container-lowest border transition-all cursor-pointer ${
+                className={`relative flex-shrink-0 w-28 text-left rounded-xl p-2 bg-surface-container-lowest border transition-all ${
                   isSelected
                     ? 'border-primary shadow-xs -translate-y-0.5 ring-2 ring-primary/20 bg-surface-container-low'
                     : 'border-outline-variant/30 hover:border-primary/50 hover:-translate-y-0.5'
-                }`}
+                } ${readOnly ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
               >
                 {/* Frame Preview Thumbnail */}
                 <div className="w-full h-32 rounded-lg bg-surface-container-lowest border border-outline-variant/20 overflow-hidden flex items-center justify-center relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={frame.asset_url}
                     alt={frame.name}

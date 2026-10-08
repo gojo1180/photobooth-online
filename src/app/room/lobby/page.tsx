@@ -7,21 +7,12 @@ import { Footer } from '@/components/common/Footer';
 import { useRoomStore } from '@/stores/useRoomStore';
 import { useAuth } from '@/hooks/useAuth';
 import { createRoom, getRoom } from '@/lib/api';
-import { Users, Plus, ArrowRight, KeyRound, Loader2, Lock } from 'lucide-react';
-
-export function generateRoomCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let result = '';
-  for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
+import { Users, Plus, ArrowRight, KeyRound, Loader2 } from 'lucide-react';
 
 export default function RoomLobbyPage() {
   const router = useRouter();
   const { setRoom, setRoomStep } = useRoomStore();
-  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const [inputCode, setInputCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -48,17 +39,8 @@ export default function RoomLobbyPage() {
       }
       router.push(`/room/${roomId}`);
     } catch (err: unknown) {
-      console.warn('Backend room creation failed, falling back to local room:', err);
-      // Fallback to local code if backend temporarily unreachable
-      const code = `pb-${generateRoomCode()}`;
-      const roomId = code.toLowerCase();
-      setRoom(roomId, code, 'host');
-      setRoomStep('WAITING');
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem(`room_role_${roomId}`, 'host');
-        sessionStorage.setItem(`room_role_${code.toUpperCase()}`, 'host');
-      }
-      router.push(`/room/${roomId}`);
+      console.warn('Backend room creation failed:', err);
+      setError('Studio online belum dapat membuat room. Periksa koneksi lalu coba lagi.');
     } finally {
       setIsLoading(false);
     }
@@ -86,8 +68,7 @@ export default function RoomLobbyPage() {
       const code = room.room_code || cleanCode;
       const roomId = code.toLowerCase();
 
-      // User joining with a code is always a GUEST
-      const role = 'guest';
+      const role = room.host_user_id === user?.id ? 'host' : 'guest';
 
       setRoom(roomId, code, role);
       setRoomStep('WAITING');
