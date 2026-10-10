@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef, type RefObject } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrthographicCamera, RoundedBox } from '@react-three/drei';
-import { DoubleSide, MathUtils, type Group, type Mesh, type MeshStandardMaterial, type PointLight } from 'three';
+import { Environment, Lightformer, OrthographicCamera, PerformanceMonitor, useGLTF } from '@react-three/drei';
+import { DoubleSide, MathUtils, type Group, type Mesh, type MeshBasicMaterial, type MeshStandardMaterial, type PointLight } from 'three';
 import { makeSceneTexture } from './sceneTextures';
 
 export interface PhotoboothCanvasProps {
@@ -11,37 +11,112 @@ export interface PhotoboothCanvasProps {
   still: boolean;
   shots: number;
   duo: boolean;
-  pointer: RefObject<{ x: number; y: number; scroll: number }>;
+  pointer: RefObject<ScenePointer>;
   onReady: () => void;
   onFailure: () => void;
   onCapture: () => void;
   onComplete: () => void;
 }
 
-const ease = (t: number) => 1 - Math.pow(1 - MathUtils.clamp(t, 0, 1), 3);
+export interface ScenePointer {
+  x: number;
+  y: number;
+  scroll: number;
+  dragX: number;
+  dragY: number;
+  dragging: boolean;
+  moved: number;
+}
 
-function Scene({ running, still, shots, duo, pointer, onReady, onFailure, onCapture, onComplete }: PhotoboothCanvasProps) {
+interface SceneProps extends PhotoboothCanvasProps {
+  onHover: (hovered: boolean) => void;
+}
+
+const ease = (t: number) => 1 - Math.pow(1 - MathUtils.clamp(t, 0, 1), 3);
+const SPRING_K = 32;
+const SPRING_DAMP = 5.6;
+const MAX_SPIN_VELOCITY = 10;
+const SPIN_LIMIT = { x: 0.6, y: 1.4 };
+const CLICK_TOLERANCE = 5;
+
+/** 3D Polaroid Camera Model loaded from GLB */
+function PolaroidModel({
+  onShoot,
+  onHover,
+}: {
+  onShoot: (event: { stopPropagation: () => void }) => void;
+  onHover: (hovered: boolean) => void;
+}) {
+  const { scene } = useGLTF('/models/polaroid_camera.glb');
+
+  const cloned = useMemo(() => {
+    const c = scene.clone(true);
+    c.traverse((child) => {
+      if ((child as Mesh).isMesh) {
+        const mesh = child as Mesh;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        const mat = mesh.material as MeshStandardMaterial;
+        if (mat) {
+          if (mat.emissive) mat.emissive.set(0x000000);
+          mat.roughness = Math.min(0.65, mat.roughness || 0.45);
+          mat.metalness = Math.max(0.12, mat.metalness || 0.2);
+          mat.needsUpdate = true;
+        }
+      }
+    });
+    return c;
+  }, [scene]);
+
+  return (
+    <group
+      onClick={onShoot}
+      onPointerOver={() => onHover(true)}
+      onPointerOut={() => onHover(false)}
+    >
+      {/* Scaled up (0.39) to make the camera heroic and prominent */}
+      <group scale={[0.39, 0.39, 0.39]} rotation={[0, Math.PI, 0]}>
+        <primitive object={cloned} position={[-0.125, -0.345, 4.969]} />
+      </group>
+    </group>
+  );
+}
+
+function Scene({ running, still, shots, duo, pointer, onReady, onFailure, onCapture, onComplete, onHover }: SceneProps) {
   const { size, gl, invalidate, setDpr } = useThree();
   const world = useRef<Group>(null);
   const body = useRef<Group>(null);
-  const shutter = useRef<Group>(null);
-  const lens = useRef<Group>(null);
   const strip = useRef<Group>(null);
   const twin = useRef<Group>(null);
-  const postcard = useRef<Group>(null);
   const flash = useRef<MeshStandardMaterial>(null);
   const flashLight = useRef<PointLight>(null);
-  const sparkle = useRef<Mesh>(null);
   const clock = useRef(0);
   const progress = useRef(2);
   const pendingShot = useRef(false);
   const rendered = useRef(false);
-  const textures = useMemo(() => ({
-    brand: makeSceneTexture('brand'), postcard: makeSceneTexture('postcard'),
-    strip: makeSceneTexture('strip', shots % 3), twin: makeSceneTexture('strip', (shots + 1) % 3),
+  const smoothScroll = useRef(0);
+  const scrollVelocity = useRef(0);
+  const shadow = useRef<Mesh>(null);
+  const shadowMaterial = useRef<MeshBasicMaterial>(null);
+  const spin = useRef({ x: 0, y: 0, vx: 0, vy: 0 });
+  const lastDrag = useRef({ x: 0, y: 0 });
+
+  const stripTextures = useMemo(() => ({
+    strip: makeSceneTexture('strip', shots % 3),
+    twin: makeSceneTexture('strip', (shots + 1) % 3),
   }), [shots]);
 
-  useEffect(() => () => Object.values(textures).forEach((texture) => texture.dispose()), [textures]);
+  useEffect(() => () => {
+    stripTextures.strip.dispose();
+    stripTextures.twin.dispose();
+  }, [stripTextures]);
+
+  const shoot = (event: { stopPropagation: () => void }) => {
+    event.stopPropagation();
+    if (pointer.current.moved > CLICK_TOLERANCE) return;
+    onCapture();
+  };
+  const hover = onHover;
 
   useEffect(() => {
     setDpr(size.width < 500 ? 1 : Math.min(window.devicePixelRatio, 1.5));
@@ -66,7 +141,7 @@ function Scene({ running, still, shots, duo, pointer, onReady, onFailure, onCapt
 
   useFrame((_, delta) => {
     if (!body.current || !strip.current || !twin.current || !world.current) return;
-    const dt = Math.min(delta, .04);
+    const dt = Math.min(delta, 0.04);
     if (running) clock.current += dt;
     if (pendingShot.current) {
       progress.current = still ? 2 : progress.current + (running ? dt : 0);
@@ -78,141 +153,210 @@ function Scene({ running, still, shots, duo, pointer, onReady, onFailure, onCapt
     const t = clock.current;
     const p = progress.current;
     const motion = !still;
-    const scroll = motion ? pointer.current.scroll : 0;
-    const shake = motion && p < .28 ? Math.sin(p * 100) * .025 * (1 - p / .28) : 0;
-    world.current.scale.setScalar(1 - scroll * .12);
-    world.current.position.y = scroll * .2;
-    body.current.position.set(-.38 + shake, .15 + (motion ? Math.sin(t * .85) * .065 : 0), 0);
-    body.current.rotation.x = MathUtils.damp(body.current.rotation.x, .07 + (motion ? -pointer.current.y * .18 : 0), 5, dt);
-    body.current.rotation.y = MathUtils.damp(body.current.rotation.y, (duo ? -.08 : -.24) + (motion ? pointer.current.x * .38 + Math.sin(t * .45) * .025 : 0), 5, dt);
-    body.current.rotation.z = -.09 + shake;
-    if (still) body.current.rotation.set(.07, duo ? -.08 : -.24, -.09);
-    if (shutter.current) shutter.current.position.y = p < .18 && motion ? -.07 * Math.sin(p / .18 * Math.PI) : 0;
-    if (lens.current) lens.current.position.z = .015 + (motion && p < .4 ? Math.sin(p / .4 * Math.PI) * .04 : 0);
-    // A single, localized warm flash. No full-screen flashing or repeated pulses.
-    const glow = motion && p > .1 && p < .23 ? Math.sin((p - .1) / .13 * Math.PI) : 0;
-    if (flash.current) flash.current.emissiveIntensity = .1 + glow * 2;
-    if (flashLight.current) flashLight.current.intensity = glow * 2;
 
-    for (const [index, item] of [strip.current, twin.current].entries()) {
+    // Scroll choreography
+    const targetScroll = motion ? pointer.current.scroll : 0;
+    const previousScroll = smoothScroll.current;
+    smoothScroll.current = MathUtils.damp(previousScroll, targetScroll, 3.5, dt);
+    scrollVelocity.current = MathUtils.damp(scrollVelocity.current, (targetScroll - smoothScroll.current) * 3, 6, dt);
+    const scroll = smoothScroll.current;
+    const lean = MathUtils.clamp(scrollVelocity.current, -0.3, 0.3);
+
+    // Mechanical camera recoil and shake
+    const shake = motion && p < 0.28 ? Math.sin(p * 100) * 0.03 * (1 - p / 0.28) : 0;
+    const recoilZ = motion && p < 0.22 ? -Math.sin(p / 0.22 * Math.PI) * 0.12 : 0;
+
+    world.current.scale.setScalar(1 - scroll * 0.15);
+    world.current.position.set(-scroll * 0.25, scroll * 0.45, -scroll * 0.35);
+
+    // Drag-to-spin with spring physics
+    const ptr = pointer.current;
+    const s = spin.current;
+    const dragDX = ptr.dragX - lastDrag.current.x;
+    const dragDY = ptr.dragY - lastDrag.current.y;
+    lastDrag.current.x = ptr.dragX;
+    lastDrag.current.y = ptr.dragY;
+    if (!motion) {
+      s.x = 0; s.y = 0; s.vx = 0; s.vy = 0;
+    } else if (ptr.dragging) {
+      s.y += dragDX;
+      s.x += dragDY;
+      s.vy = MathUtils.damp(s.vy, dragDX / Math.max(dt, 0.001), 14, dt);
+      s.vx = MathUtils.damp(s.vx, dragDY / Math.max(dt, 0.001), 14, dt);
+    } else {
+      s.vy += (-SPRING_K * s.y - SPRING_DAMP * s.vy) * dt;
+      s.vx += (-SPRING_K * s.x - SPRING_DAMP * s.vx) * dt;
+      s.y += s.vy * dt;
+      s.x += s.vx * dt;
+    }
+    s.vy = MathUtils.clamp(s.vy, -MAX_SPIN_VELOCITY, MAX_SPIN_VELOCITY);
+    s.vx = MathUtils.clamp(s.vx, -MAX_SPIN_VELOCITY, MAX_SPIN_VELOCITY);
+    if (Math.abs(s.y) >= SPIN_LIMIT.y && Math.sign(s.vy) === Math.sign(s.y)) s.vy = 0;
+    if (Math.abs(s.x) >= SPIN_LIMIT.x && Math.sign(s.vx) === Math.sign(s.x)) s.vx = 0;
+    s.y = MathUtils.clamp(s.y, -SPIN_LIMIT.y, SPIN_LIMIT.y);
+    s.x = MathUtils.clamp(s.x, -SPIN_LIMIT.x, SPIN_LIMIT.x);
+    world.current.rotation.set(s.x, s.y, 0);
+
+    // Floating levitation + pointer parallax
+    const baseY = 0.08 + (motion ? Math.sin(t * 0.85) * 0.055 : 0);
+    body.current.position.set(-0.22 + shake, baseY, recoilZ);
+    body.current.rotation.x = MathUtils.damp(body.current.rotation.x, 0.05 + (motion ? -pointer.current.y * 0.16 + scroll * 0.22 + lean * 0.4 : 0), 5, dt);
+    body.current.rotation.y = MathUtils.damp(body.current.rotation.y, (duo ? -0.06 : -0.16) + (motion ? pointer.current.x * 0.32 + Math.sin(t * 0.45) * 0.02 + scroll * 0.8 : 0), 5, dt);
+    body.current.rotation.z = -0.04 + shake + (motion ? -scroll * 0.1 + lean * 0.25 : 0);
+    if (still) body.current.rotation.set(0.05, duo ? -0.06 : -0.16, -0.04);
+
+    // Shutter flash explosion
+    const glow = motion && p > 0.07 && p < 0.24 ? Math.sin((p - 0.07) / 0.17 * Math.PI) : 0;
+    if (flash.current) flash.current.emissiveIntensity = 0.1 + glow * 5.5;
+    if (flashLight.current) flashLight.current.intensity = glow * 5.0;
+
+    // Authentic Polaroid Film Ejection from the front tray mouth (Z = 1.86, Y = -1.22)
+    for (let index = 0; index < 2; index++) {
+      const item = index === 0 ? strip.current : twin.current;
       item.visible = index === 0 || duo;
-      const finalX = index === 0 ? 1.92 : 1.04;
-      const finalY = index === 0 ? -.05 : -.46;
-      if (p < .85 && motion) {
-        const eject = ease((p - .2) / .65);
-        item.scale.set(1, Math.max(.015, eject), 1);
-        item.position.set(-.25 + index * .1, -.58 - .88 * eject, .66 + index * .02);
-        item.rotation.set(0, 0, -.09);
+
+      // Slot mouth coordinates (located at the front lip of the Polaroid tray)
+      const slotX = -0.17 + index * 0.12;
+      const slotY = -1.22;
+      const slotZ = 1.86 + index * 0.03;
+
+      // Target showcase coordinates (top edge of the floating photo print)
+      const finalX = index === 0 ? 1.62 : 0.96;
+      const finalY = index === 0 ? 0.90 : 0.45;
+      const finalZ = 1.15;
+
+      if (p < 0.85 && motion) {
+        // Phase 1: Feeding out forward-downwards from the camera mouth
+        const eject = ease((p - 0.2) / 0.65);
+        item.scale.set(1.05, Math.max(0.015, eject * 1.05), 1.05);
+        item.position.set(slotX, slotY, slotZ);
+        // Tilted forward as it emerges out of the slot
+        item.rotation.set(0.38, -0.15, -0.04);
       } else {
-        const settle = motion ? ease((p - .85) / .8) : 1;
-        item.scale.setScalar(1);
-        item.position.set(MathUtils.lerp(-.25, finalX, settle), MathUtils.lerp(-1.46, finalY, settle) + (motion ? Math.sin(t + index) * .045 * settle : 0), .68 + index * .03);
-        item.rotation.set(0, -.08, MathUtils.lerp(-.09, index === 0 ? -.15 : .15, settle));
+        // Phase 2: Detaching from the camera and smoothly floating into showcase position
+        const settle = motion ? ease((p - 0.85) / 0.8) : 1;
+        item.scale.setScalar(1.05);
+        item.position.set(
+          MathUtils.lerp(slotX, finalX, settle),
+          MathUtils.lerp(slotY, finalY, settle) + (motion ? Math.sin(t + index) * 0.04 * settle : 0),
+          MathUtils.lerp(slotZ, finalZ, settle)
+        );
+        item.rotation.set(
+          MathUtils.lerp(0.38, 0, settle),
+          MathUtils.lerp(-0.15, -0.07, settle),
+          MathUtils.lerp(-0.04, index === 0 ? -0.14 : 0.12, settle)
+        );
       }
     }
-    if (postcard.current) {
-      postcard.current.position.y = -1.23 + (motion ? Math.sin(t * .7 + 2) * .055 : 0);
-      postcard.current.rotation.z = .15 + (motion ? Math.sin(t * .5) * .025 : 0);
+
+    // Ground contact shadow under the enlarged camera
+    if (shadow.current && shadowMaterial.current) {
+      const lift = motion ? Math.sin(t * 0.85) : 0;
+      shadow.current.scale.set(2.5 * (1 - lift * 0.04 - Math.abs(s.y) * 0.1), 0.34 * (1 - lift * 0.04), 1);
+      shadowMaterial.current.opacity = 0.16 - lift * 0.02;
     }
-    if (sparkle.current) sparkle.current.rotation.z = motion ? t * .12 : .2;
-    if (!rendered.current) { rendered.current = true; onReady(); }
+
+    if (!rendered.current) {
+      rendered.current = true;
+      onReady();
+    }
   });
 
   return (
     <>
-      <OrthographicCamera makeDefault position={[0, 0, 10]} zoom={Math.min(size.width / 6.5, size.height / 5.05)} near={.1} far={40} />
-      <ambientLight intensity={1.2} />
-      <hemisphereLight args={['#fff3dc', '#6b658a', 2]} />
-      <directionalLight position={[-3, 5, 6]} intensity={3.2} color="#fff1da" />
-      <directionalLight position={[4, 1, 2]} intensity={1.3} color="#cfddff" />
+      <OrthographicCamera
+        makeDefault
+        position={[0, 0, 10]}
+        zoom={Math.min(size.width / 5.4, size.height / 4.4)}
+        near={0.1}
+        far={40}
+      />
+      <PerformanceMonitor
+        onDecline={() => setDpr(1)}
+        onIncline={() => setDpr(size.width < 500 ? 1 : Math.min(window.devicePixelRatio, 1.5))}
+      />
+
+      {/* Balanced Studio Lighting */}
+      <ambientLight intensity={0.95} />
+      <hemisphereLight args={['#fff3dc', '#6b658a', 1.4]} />
+      <directionalLight position={[-3, 5, 6]} intensity={3.2} color="#fff2db" />
+      <directionalLight position={[4, 2, 3]} intensity={1.5} color="#cfddff" />
+      <directionalLight position={[-3, 2, -4]} intensity={2.0} color="#ffb566" />
+
+      <Environment resolution={128} frames={1} environmentIntensity={1.0}>
+        <Lightformer form="rect" intensity={3} color="#fff4e0" position={[-4, 4, 5]} scale={[6, 3, 1]} />
+        <Lightformer form="rect" intensity={1.6} color="#cfe0ff" position={[5, 1, 3]} scale={[3, 5, 1]} />
+        <Lightformer form="ring" intensity={2} color="#ffc98a" position={[0, 1, -5]} scale={4} />
+      </Environment>
+
       <group ref={world}>
-        <mesh position={[-.4, -1.48, -.9]} scale={[1.8, .19, 1]}>
-          <circleGeometry args={[1, 48]} /><meshBasicMaterial color="#895100" transparent opacity={.12} depthWrite={false} />
-        </mesh>
-        <mesh position={[.1, .15, -.85]} rotation={[.12, .65, -.3]}>
-          <torusGeometry args={[2.2, .009, 5, 72]} /><meshBasicMaterial color="#b77b28" transparent opacity={.5} />
+        {/* Soft, Realistic Contact Shadow */}
+        <mesh ref={shadow} position={[-0.22, -1.62, -0.4]} scale={[2.5, 0.34, 1]}>
+          <circleGeometry args={[1, 48]} />
+          <meshBasicMaterial ref={shadowMaterial} color="#5e3800" transparent opacity={0.16} depthWrite={false} />
         </mesh>
 
-        <group ref={body} position={[-.38, .15, 0]} rotation={[.07, -.24, -.09]}>
-          <RoundedBox args={[2.85, 1.92, .76]} radius={.2} smoothness={3}>
-            <meshPhysicalMaterial color="#f6eddb" roughness={.42} clearcoat={.35} />
-          </RoundedBox>
-          <RoundedBox args={[2.8, 1.03, .78]} radius={.09} smoothness={2} position={[0, -.22, .015]}>
-            <meshPhysicalMaterial color="#1230b0" roughness={.46} clearcoat={.3} />
-          </RoundedBox>
-          <mesh position={[-.59, .62, .395]}>
-            <planeGeometry args={[1.24, .46]} /><meshBasicMaterial map={textures.brand} transparent depthWrite={false} />
+        {/* 3D Camera Body (Enlarged & Centered GLB Model) */}
+        <group ref={body} position={[-0.22, 0.08, 0]} rotation={[0.05, -0.16, -0.04]}>
+          <PolaroidModel onShoot={shoot} onHover={hover} />
+
+          {/* Flash Unit Light & Bulb Glow Mesh */}
+          <pointLight ref={flashLight} position={[0.38, 1.30, 0.95]} color="#fff5e6" intensity={0} distance={6} />
+          <mesh position={[0.38, 1.30, 0.88]}>
+            <planeGeometry args={[0.38, 0.24]} />
+            <meshStandardMaterial ref={flash} color="#f4eee3" emissive="#ffddb0" emissiveIntensity={0.1} roughness={0.3} />
           </mesh>
-          <RoundedBox args={[.47, .3, .1]} radius={.045} smoothness={2} position={[.94, .63, .42]}>
-            <meshStandardMaterial color="#747a80" metalness={.45} roughness={.35} />
-          </RoundedBox>
-          <RoundedBox args={[.34, .18, .06]} radius={.025} smoothness={2} position={[.94, .63, .49]}>
-            <meshPhysicalMaterial color="#284360" metalness={.5} roughness={.14} clearcoat={1} />
-          </RoundedBox>
-          <RoundedBox args={[.37, .22, .05]} radius={.025} smoothness={2} position={[.36, .63, .405]}>
-            <meshStandardMaterial ref={flash} color="#f4eee3" emissive="#ffddb0" emissiveIntensity={.1} roughness={.3} />
-          </RoundedBox>
-          <pointLight ref={flashLight} position={[.36, .63, 1]} color="#ffe4bc" intensity={0} distance={4} />
-          <group ref={lens}>
-            <mesh position={[.17, -.14, .56]} rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[.68, .7, .36, 48]} /><meshStandardMaterial color="#18243c" roughness={.32} metalness={.4} />
-            </mesh>
-            <mesh position={[.17, -.14, .76]}>
-              <torusGeometry args={[.575, .069, 12, 64]} /><meshStandardMaterial color="#ded5bf" metalness={.65} roughness={.25} />
-            </mesh>
-            <mesh position={[.17, -.14, .78]}>
-              <torusGeometry args={[.46, .045, 10, 48]} /><meshStandardMaterial color="#101b35" metalness={.4} roughness={.25} />
-            </mesh>
-            <mesh position={[.17, -.14, .795]} scale={[1, 1, .24]}>
-              <sphereGeometry args={[.423, 32, 20]} /><meshPhysicalMaterial color="#143f65" metalness={.6} roughness={.12} clearcoat={1} clearcoatRoughness={.08} />
-            </mesh>
-            <mesh position={[.05, .01, .9]} rotation={[0, 0, -.4]} scale={[1, .4, 1]}>
-              <circleGeometry args={[.13, 24]} /><meshBasicMaterial color="#d8f4ff" transparent opacity={.48} depthWrite={false} />
-            </mesh>
-          </group>
-          <group ref={shutter}>
-            <mesh position={[-.93, 1, 0]} onClick={(event) => { event.stopPropagation(); onCapture(); }}>
-              <cylinderGeometry args={[.19, .22, .17, 24]} /><meshStandardMaterial color="#fea12b" metalness={.25} roughness={.36} />
-            </mesh>
-          </group>
-          <mesh position={[-1.03, -.12, .47]} rotation={[Math.PI / 2, 0, 0]} onClick={(event) => { event.stopPropagation(); onCapture(); }}>
-            <cylinderGeometry args={[.17, .18, .1, 24]} /><meshStandardMaterial color="#fea12b" roughness={.35} metalness={.2} />
-          </mesh>
-          <RoundedBox args={[1.24, .075, .08]} radius={.025} smoothness={2} position={[.05, -.79, .39]}>
-            <meshStandardMaterial color="#172137" roughness={.7} />
-          </RoundedBox>
         </group>
 
+        {/* Dynamic Physical Photo Strips (Top-Edge Pivot for Authentic Slot Ejection) */}
         <group ref={twin} visible={duo}>
-          <mesh><boxGeometry args={[.72, 1.82, .022]} /><meshStandardMaterial color="#ffebc6" /></mesh>
-          <mesh position={[0, 0, .014]}><planeGeometry args={[.72, 1.82]} /><meshBasicMaterial map={textures.twin} side={DoubleSide} /></mesh>
+          <group position={[0, -0.95, 0]}>
+            <mesh>
+              <boxGeometry args={[0.76, 1.9, 0.024]} />
+              <meshStandardMaterial color="#ffebc6" roughness={0.3} />
+            </mesh>
+            <mesh position={[0, 0, 0.015]}>
+              <planeGeometry args={[0.76, 1.9]} />
+              <meshBasicMaterial map={stripTextures.twin} side={DoubleSide} toneMapped={false} />
+            </mesh>
+          </group>
         </group>
+
         <group ref={strip}>
-          <mesh><boxGeometry args={[.72, 1.82, .022]} /><meshStandardMaterial color="#ffe2ee" /></mesh>
-          <mesh position={[0, 0, .014]}><planeGeometry args={[.72, 1.82]} /><meshBasicMaterial map={textures.strip} side={DoubleSide} /></mesh>
+          <group position={[0, -0.95, 0]}>
+            <mesh>
+              <boxGeometry args={[0.76, 1.9, 0.024]} />
+              <meshStandardMaterial color="#ffe2ee" roughness={0.3} />
+            </mesh>
+            <mesh position={[0, 0, 0.015]}>
+              <planeGeometry args={[0.76, 1.9]} />
+              <meshBasicMaterial map={stripTextures.strip} side={DoubleSide} toneMapped={false} />
+            </mesh>
+          </group>
         </group>
-        <group ref={postcard} position={[-1.42, -1.23, .85]} rotation={[0, .08, .15]}>
-          <mesh><boxGeometry args={[1.55, .59, .025]} /><meshStandardMaterial color="#ffd8ec" /></mesh>
-          <mesh position={[0, 0, .016]}><planeGeometry args={[1.55, .59]} /><meshBasicMaterial map={textures.postcard} /></mesh>
-        </group>
-        <mesh ref={sparkle} position={[1.95, 1.48, .1]} rotation={[0, 0, .2]}>
-          <octahedronGeometry args={[.25, 0]} /><meshStandardMaterial color="#001c97" metalness={.2} roughness={.35} />
-        </mesh>
-        <mesh position={[-2.2, 1.28, .1]} rotation={[.4, .2, .5]}>
-          <octahedronGeometry args={[.13, 0]} /><meshStandardMaterial color="#fff4ce" roughness={.4} />
-        </mesh>
       </group>
     </>
   );
 }
 
 export default function PhotoboothCanvas(props: PhotoboothCanvasProps) {
+  const [hovered, setHovered] = useState(false);
   return (
-    <Canvas orthographic camera={{ position: [0, 0, 10], zoom: 75, near: .1, far: 40 }}
-      dpr={[1, 1.5]} frameloop={props.running ? 'always' : 'demand'}
+    <Canvas
+      orthographic
+      camera={{ position: [0, 0, 10], zoom: 85, near: 0.1, far: 40 }}
+      dpr={[1, 1.5]}
+      frameloop={props.running ? 'always' : 'demand'}
       gl={{ alpha: true, antialias: true, powerPreference: 'low-power' }}
-      fallback={<span>3D preview unavailable.</span>} aria-hidden="true">
-      <Scene {...props} />
+      style={hovered ? { cursor: 'pointer' } : undefined}
+      fallback={<span>3D preview unavailable.</span>}
+      aria-hidden="true"
+    >
+      <Suspense fallback={null}>
+        <Scene {...props} onHover={setHovered} />
+      </Suspense>
     </Canvas>
   );
 }
+
+useGLTF.preload('/models/polaroid_camera.glb');
