@@ -1,5 +1,39 @@
 @import "tailwindcss";
 
+/* Landing motion: tangible prints with keyboard and reduced-motion equivalents. */
+.landing-print {
+  transform: perspective(800px) rotateY(-9deg) rotateZ(-5deg);
+  transition: transform 400ms ease;
+}
+.landing-print-duo { transform: perspective(800px) rotateY(9deg) rotateZ(5deg); }
+.landing-page .card-spotlight:hover .landing-print,
+.landing-page .card-spotlight:focus-within .landing-print {
+  transform: perspective(800px) rotateY(0) rotateZ(0) translateY(-5px);
+}
+.landing-frame-stack { isolation: isolate; perspective: 900px; }
+.landing-frame-stack::before,
+.landing-frame-stack::after {
+  content: '';
+  position: absolute;
+  inset: 12% 8%;
+  border: 1px solid #001c9720;
+  border-radius: 8px;
+  z-index: -1;
+  background: #ffd8ec;
+  transform: rotate(-8deg);
+  transition: transform 400ms ease;
+}
+.landing-frame-stack::after { background: #ffdcbd; transform: rotate(7deg); }
+.landing-frame-stack:hover::before { transform: rotate(-12deg) translateX(-6px); }
+.landing-frame-stack:hover::after { transform: rotate(11deg) translateX(6px); }
+@media (prefers-reduced-motion: reduce) {
+  .landing-page .landing-print,
+  .landing-page .card-spotlight:hover .landing-print,
+  .landing-page .card-spotlight:focus-within .landing-print { transform: none; }
+  .landing-frame-stack:hover::before { transform: rotate(-8deg); }
+  .landing-frame-stack:hover::after { transform: rotate(7deg); }
+}
+
 @layer base {
 
   html {

@@ -1,0 +1,70 @@
+.scene { position: relative; width: 100%; max-width: 610px; margin: auto; color: #001c97; }
+.stage { position: relative; height: 470px; perspective: 1000px; touch-action: pan-y; }
+.halo { position: absolute; width: 390px; height: 390px; left: 50%; top: 28px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(circle at 40% 35%, #ffdfb0 0%, #ffc066 60%, #eca03e 100%); box-shadow: inset 0 0 60px #ffe4b04d; }
+.orbit { position: absolute; width: 490px; height: 330px; border: 1px solid #693d0033; border-radius: 50%; left: 50%; top: 74px; transform: translateX(-50%) rotate(-24deg); }
+.edition { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); font: 9px monospace; letter-spacing: .2em; white-space: nowrap; color: #693d00; }
+.shadow { position: absolute; left: 20%; bottom: 29px; width: 60%; height: 32px; border-radius: 50%; background: #683c0033; filter: blur(13px); }
+.world { position: absolute; inset: 0; transform-style: preserve-3d; }
+.floating { position: absolute; left: 16%; top: 110px; width: 310px; height: 225px; transform-style: preserve-3d; animation: bob 8s ease-in-out infinite; }
+.camera { position: relative; width: 100%; height: 100%; transform: rotateX(7deg) rotateY(-18deg) rotateZ(-8deg); transform-style: preserve-3d; }
+.cameraFront { position: absolute; inset: 0; border-radius: 30px; background: linear-gradient(145deg, #fff9ec, #e8dfcc); box-shadow: inset 3px 4px 4px #fff, inset -3px -5px 8px #a18c7155, 0 22px 30px #683c0026; transform: translateZ(28px); transform-style: preserve-3d; }
+.cameraSide { position: absolute; top: 12px; right: -27px; width: 56px; height: 202px; background: linear-gradient(90deg, #8e8c99, #dad0bd); border-radius: 14px; transform: rotateY(90deg); }
+.cameraTop { position: absolute; top: -17px; left: 17px; width: 275px; height: 56px; background: linear-gradient(#c0b6a4, #eee6d7); border-radius: 15px; transform: rotateX(90deg); }
+.brand { position: absolute; top: 22px; left: 24px; text-align: left; }
+.brand span { display: block; font: italic bold 23px Georgia, serif; letter-spacing: -.04em; }
+.brand small { display: block; font: 7px monospace; letter-spacing: .2em; margin-top: 3px; }
+.viewfinder { position: absolute; right: 26px; top: 24px; width: 52px; height: 31px; padding: 6px; border-radius: 8px; background: #a7a399; box-shadow: inset 1px 2px 3px #756f65; }
+.viewfinder i { display: block; width: 100%; height: 100%; background: linear-gradient(135deg, #173a63, #7eacb1); border: 3px solid #243043; border-radius: 3px; }
+.flash { position: absolute; top: 30px; right: 88px; width: 31px; height: 20px; border: 3px solid #a8a39b; background: repeating-linear-gradient(90deg, #ece9df 0 3px, #b7b9af 3px 4px); border-radius: 4px; }
+.cameraBand { position: absolute; top: 79px; left: 0; right: 0; height: 115px; background: linear-gradient(135deg, #2746d5, #001c97 60%, #081b69); box-shadow: inset 0 3px 5px #071d65; }
+.lens { position: absolute; width: 145px; height: 145px; top: 65px; left: 83px; border-radius: 50%; padding: 9px; background: repeating-conic-gradient(#16265b 0deg 3deg, #59617a 3deg 5deg); box-shadow: 5px 9px 0 #06153e, 10px 19px 20px #07123566; transform: translateZ(24px); }
+.lensRing { width: 100%; height: 100%; border: 10px solid #e9e1d0; border-radius: 50%; padding: 9px; background: #152142; box-shadow: inset 0 0 0 2px #a5a193, 1px 1px 2px #fff9; }
+.glass { width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle at 64% 67%, #376576 0%, #133c61 23%, #0c142e 45%, #263a83 66%, #90bac1 90%); border: 5px solid #0a1029; box-shadow: inset 2px 3px 8px #030516; position: relative; }
+.glass i { position: absolute; width: 27px; height: 15px; border-radius: 50%; top: 9px; left: 8px; background: linear-gradient(#e5ffffb3, #c8ffff1a); transform: rotate(-40deg); }
+.lensLabel { position: absolute; left: 108px; bottom: 6px; font: 6px monospace; letter-spacing: .1em; }
+.shutter { position: absolute; top: 93px; left: 21px; width: 43px; height: 43px; border-radius: 50%; display: grid; place-items: center; color: #693d00; background: linear-gradient(135deg, #ffdcbd, #fea12b); border: 3px solid #f9c575; box-shadow: 2px 5px 0 #965619, 4px 9px 12px #0004; cursor: pointer; transform: translateZ(12px); transition: box-shadow .2s, transform .2s; }
+.shutter:hover { transform: translateZ(15px) scale(1.07); }
+.shutter:active { transform: translateZ(9px) translateY(3px); box-shadow: 0 2px 0 #965619; }
+.shutter:focus-visible { outline: 3px solid white; outline-offset: 4px; }
+.shutterLabel { position: absolute; top: 148px; left: 20px; font: 7px monospace; color: #fff0d4; letter-spacing: .12em; }
+.cameraFoot { position: absolute; bottom: 10px; left: 16px; font: 5px monospace; letter-spacing: .04em; }
+.strip { position: absolute; top: 128px; right: 7%; width: 117px; padding: 9px; background: #ffe2ee; border: 1px solid #e8aac1; box-shadow: 7px 12px 0 #985d3217, 10px 20px 25px #683c0038; transform: translateZ(60px) rotate(13deg); animation: stripFloat 9s ease-in-out infinite; }
+.strip[data-printed='true'] { animation: print .7s ease-out both, stripFloat 9s .7s ease-in-out infinite; }
+.stripTitle { display: block; font: bold 5px monospace; text-align: center; letter-spacing: .04em; margin-bottom: 7px; color: #541b44; }
+.photo { height: 65px; position: relative; overflow: hidden; background: #a7c8c1; margin-bottom: 5px; }
+.photo[data-pose='1'] { background: #ddad8e; }
+.photo[data-pose='2'] { background: #b9bce0; }
+.photoSun { position: absolute; right: 10px; top: 7px; width: 24px; height: 24px; border-radius: 50%; background: #fff4c6; }
+.portrait { position: absolute; left: 25px; bottom: -5px; width: 48px; height: 62px; transform: rotate(-8deg); }
+.portrait i { position: absolute; left: 9px; top: 3px; width: 28px; height: 32px; background: #a95835; border-radius: 48% 48% 45% 45%; border-top: 11px solid #342a37; box-shadow: -4px -3px 0 #342a37; }
+.portrait b { position: absolute; bottom: -2px; left: 0; width: 50px; height: 33px; border-radius: 24px 24px 0 0; background: #fff1ce; }
+.photo[data-pose='1'] .portrait { transform: rotate(12deg) translateX(8px); }
+.photo[data-pose='2'] .portrait { transform: rotate(-15deg) scale(1.12); }
+.photo[data-pose='2'] .portrait b { background: #1230c7; }
+.photoStar { position: absolute; top: 4px; left: 9px; color: #fff4c6; font-size: 20px; }
+.photo small { position: absolute; bottom: 3px; right: 4px; color: white; font: 6px monospace; }
+.stripFooter { display: flex; justify-content: space-between; align-items: center; font: italic bold 12px Georgia, serif; margin-top: 9px; color: #541b44; }
+.postcard { position: absolute; left: 7%; top: 325px; display: flex; align-items: center; gap: 18px; padding: 16px 20px; background: #ffd8ec; border: 1px solid #541b4420; box-shadow: 3px 7px 16px #683c001f; transform: translateZ(70px) rotate(-12deg); color: #541b44; }
+.postcard span { font: 18px/1.05 Georgia, serif; text-align: left; }
+.postcard em { font-size: 23px; }
+.sparkle { position: absolute; right: 9%; top: 61px; font-size: 58px; color: #001c97; transform: translateZ(45px) rotate(15deg); }
+.sparkleSmall { position: absolute; left: 9%; top: 59px; font-size: 43px; color: #693d00; }
+.controls { position: relative; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; padding: 0 8px 12px; }
+.hint { display: flex; align-items: center; gap: 6px; color: #693d00; font-size: 11px; }
+.pause { display: flex; gap: 5px; align-items: center; justify-content: center; min-height: 44px; padding: 0 12px; border-radius: 30px; background: #fff7e54d; border: 1px solid #693d0033; color: #693d00; font-size: 11px; cursor: pointer; }
+.pause:disabled { cursor: default; }
+.scene[data-active='false'] *, .scene[data-active='false'] *::before { animation-play-state: paused !important; }
+.scene[data-still='true'] .strip { animation: none; }
+@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-12px) rotate(1deg); } }
+@keyframes stripFloat { 0%, 100% { transform: translateZ(60px) translateY(0) rotate(13deg); } 50% { transform: translateZ(60px) translateY(10px) rotate(9deg); } }
+@keyframes print { from { transform: translateZ(60px) translateY(-35px) rotate(6deg); opacity: .4; } to { transform: translateZ(60px) translateY(0) rotate(13deg); opacity: 1; } }
+@media (max-width: 600px) {
+  .stage { height: 360px; }
+  .world { width: 500px; height: 450px; left: 50%; margin-left: -250px; scale: .68; transform-origin: center 35%; }
+  .halo { width: 285px; height: 285px; top: 25px; }
+  .orbit { width: 315px; height: 240px; top: 50px; }
+  .edition { top: 13px; font-size: 7px; }
+  .shadow { bottom: 18px; }
+}
+@media (max-width: 360px) { .world { scale: .65; } .stage { height: 330px; } .orbit { width: 270px; } }
+@media (prefers-reduced-motion: reduce) { .floating, .strip, .strip[data-printed='true'] { animation: none; } .shutter { transition: none; } }

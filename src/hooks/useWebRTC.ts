@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useRoomStore, type UserRole } from '@/stores/useRoomStore';
-import { WS_BASE_URL } from '@/lib/api';
+import { createWebSocketTicket, getAuthToken, WS_BASE_URL } from '@/lib/api';
 import { createClient } from '@/lib/supabase/client';
 
 const ICE_SERVERS: RTCConfiguration = {
@@ -97,7 +97,7 @@ export function useWebRTC(
           ? crypto.randomUUID()
           : `usr_${Math.random().toString(36).slice(2, 10)}`;
     }
-    const mySenderId = senderIdRef.current;
+    let mySenderId = senderIdRef.current;
     
     // Normalize room code to lowercase pb- prefix
     const rawClean = roomId.toLowerCase().replace('room_', '').trim();
@@ -190,17 +190,12 @@ export function useWebRTC(
     }
 
     // 3. Connect to Go Backend WebSocket Hub
-    const wsUrl = `${WS_BASE_URL}/rooms/${encodeURIComponent(cleanRoomCode)}?sender_id=${mySenderId}`;
     let ws: WebSocket | null = null;
     let fallbackChannel: RealtimeChannel | null = null;
     let shouldFallback = true;
-
-    try {
-      ws = new WebSocket(wsUrl);
-      wsRef.current = ws;
-    } catch (e) {
-      console.warn('[WebRTC] WebSocket instantiation failed, falling back:', e);
-    }
+    let fallbackInitializing = false;
+    const fallbackEnabled =
+      process.env.NEXT_PUBLIC_ENABLE_SUPABASE_SIGNALING_FALLBACK === 'true';
 
     // Emit local ICE candidates
     pc.onicecandidate = (event) => {
@@ -275,8 +270,8 @@ export function useWebRTC(
       }
     };
 
-    if (ws) {
-      ws.onopen = () => {
+    const configureWebSocket = (socket: WebSocket) => {
+      socket.onopen = () => {
         console.log(`[Signaling WS] Connected to Go Backend room: ${cleanRoomCode}`);
         setSignalingMode('websocket');
         setConnectionError(null);
@@ -287,10 +282,10 @@ export function useWebRTC(
           type: 'PEER_JOINED',
           sender_id: mySenderId,
         };
-        ws?.send(JSON.stringify(joinSignal));
+        socket.send(JSON.stringify(joinSignal));
       };
 
-      ws.onmessage = async (event) => {
+      socket.onmessage = async (event) => {
         try {
           const msg: SignalEnvelope = JSON.parse(event.data);
           if (msg.sender_id === mySenderId) return;
@@ -316,7 +311,7 @@ export function useWebRTC(
                   type: 'PEER_READY',
                   sender_id: mySenderId,
                 };
-                ws?.send(JSON.stringify(readyMsg));
+                socket.send(JSON.stringify(readyMsg));
               }
               break;
             }
@@ -340,7 +335,7 @@ export function useWebRTC(
               shouldFallback = false;
               setConnectionError('Room sudah berisi Host dan Guest. Tidak ada slot koneksi tambahan.');
               setPeerStatus('error');
-              ws?.close();
+              socket.close();
               break;
             }
 
@@ -359,7 +354,7 @@ export function useWebRTC(
                     sender_id: mySenderId,
                     payload: { sdp: answer },
                   };
-                  ws?.send(JSON.stringify(reply));
+                  socket.send(JSON.stringify(reply));
                   console.log('[Signaling WS] Guest sent ANSWER to Host');
                 } catch (err) {
                   console.error('[Signaling WS] Guest error handling offer:', err);
@@ -401,35 +396,46 @@ export function useWebRTC(
         }
       };
 
-      ws.onerror = (err) => {
-        console.warn('[Signaling WS] Go backend WS error, activating fallback:', err);
-        setConnectionError('Koneksi studio utama terputus. Mengalihkan ke jalur cadangan…');
-        initSupabaseFallback();
-      };
-
-      ws.onclose = () => {
-        console.log('[Signaling WS] Disconnected from Go backend room hub');
-        if (!disposed && !fallbackChannel && shouldFallback) {
-          setPeerStatus('disconnected');
-          initSupabaseFallback();
+      socket.onerror = (err) => {
+        console.warn('[Signaling WS] Go backend WS error:', err);
+        if (fallbackEnabled) {
+          setConnectionError('Koneksi studio utama terputus. Mengalihkan ke jalur cadangan…');
+          void initSupabaseFallback();
+        } else {
+          setConnectionError('Koneksi aman ke room gagal. Silakan coba kembali.');
+          setPeerStatus('error');
         }
       };
-    } else {
-      initSupabaseFallback();
-    }
+
+      socket.onclose = () => {
+        console.log('[Signaling WS] Disconnected from Go backend room hub');
+        if (!disposed && !fallbackChannel && shouldFallback) {
+          if (fallbackEnabled) {
+            setPeerStatus('disconnected');
+            void initSupabaseFallback();
+          } else {
+            setPeerStatus('error');
+          }
+        }
+      };
+    };
 
     // Fallback: Supabase Realtime Broadcast Channel
-    function initSupabaseFallback() {
-      if (fallbackChannel) return;
+    async function initSupabaseFallback() {
+      if (!fallbackEnabled || fallbackChannel || fallbackInitializing || disposed) return;
+      fallbackInitializing = true;
       console.log('[WebRTC] Starting Supabase Realtime fallback signaling...');
-      const supabase = createClient();
-      setSignalingMode('supabase');
-      const channel = supabase.channel(`room_${cleanRoomCode}`, {
-        config: { broadcast: { self: false } },
-      });
-      fallbackChannel = channel;
+      try {
+        const supabase = createClient();
+        await supabase.realtime.setAuth(await getAuthToken());
+        if (disposed) return;
+        setSignalingMode('supabase');
+        const channel = supabase.channel(`room_${cleanRoomCode}`, {
+          config: { private: true, broadcast: { self: false } },
+        });
+        fallbackChannel = channel;
 
-      channel
+        channel
         .on('broadcast', { event: 'peer-ready' }, async () => {
           if (role === 'host') await sendOffer();
         })
@@ -482,8 +488,41 @@ export function useWebRTC(
             setConnectionError('Tidak dapat tersambung ke layanan sinkronisasi room.');
             setPeerStatus('error');
           }
-        });
+          });
+      } catch (error) {
+        console.error('[WebRTC] Secure fallback initialization failed:', error);
+        setConnectionError('Tidak dapat memverifikasi jalur cadangan room.');
+        setPeerStatus('error');
+      } finally {
+        fallbackInitializing = false;
+      }
     }
+
+    async function connectWebSocket() {
+      try {
+        const ticket = await createWebSocketTicket(cleanRoomCode);
+        if (disposed) return;
+
+        mySenderId = ticket.sender_id;
+        senderIdRef.current = ticket.sender_id;
+        const wsUrl = `${WS_BASE_URL}/rooms/${encodeURIComponent(cleanRoomCode)}?ticket=${encodeURIComponent(ticket.ticket)}`;
+        const socket = new WebSocket(wsUrl);
+        ws = socket;
+        wsRef.current = socket;
+        configureWebSocket(socket);
+      } catch (error) {
+        console.error('[WebRTC] Secure WebSocket initialization failed:', error);
+        if (disposed) return;
+        setConnectionError(
+          error instanceof Error ? error.message : 'Koneksi aman ke room gagal.'
+        );
+        // A ticket rejection can mean unauthenticated/non-member access. Never
+        // route around that authorization decision through another provider.
+        setPeerStatus('error');
+      }
+    }
+
+    void connectWebSocket();
 
     return () => {
       disposed = true;

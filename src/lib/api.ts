@@ -59,6 +59,12 @@ export interface RoomData {
   expires_at: string;
 }
 
+export interface WebSocketTicketResponse {
+  ticket: string;
+  expires_at: string;
+  sender_id: string;
+}
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -77,14 +83,25 @@ export interface AuthResponse {
 
 /**
  * Retrieves the active access token: checks localStorage first (backend session),
- * then Supabase client session, or falls back to 'dev-admin-token'.
+ * then Supabase client session. The development token is opt-in only.
  */
 export async function getAuthToken(): Promise<string> {
+  const allowDevAuth =
+    process.env.NODE_ENV === 'development' &&
+    process.env.NEXT_PUBLIC_ALLOW_DEV_AUTH === 'true';
+
   try {
     if (typeof window !== 'undefined') {
       const storedToken = localStorage.getItem('photobooth_auth_token');
       if (storedToken) {
-        return storedToken;
+        if (
+          (storedToken === 'dev-admin-token' || storedToken === 'mock-token') &&
+          !allowDevAuth
+        ) {
+          localStorage.removeItem('photobooth_auth_token');
+        } else {
+          return storedToken;
+        }
       }
     }
     const supabase = createClient();
@@ -95,7 +112,10 @@ export async function getAuthToken(): Promise<string> {
   } catch (err) {
     console.warn('Could not read session token:', err);
   }
-  return 'dev-admin-token';
+  if (allowDevAuth) {
+    return 'dev-admin-token';
+  }
+  throw new Error('Sesi autentikasi tidak ditemukan. Silakan masuk kembali.');
 }
 
 // ----------------------------------------------------------------------------
@@ -368,4 +388,19 @@ export async function getRoom(code: string): Promise<RoomData> {
     },
     cache: 'no-store',
   });
+}
+
+export async function createWebSocketTicket(
+  code: string
+): Promise<WebSocketTicketResponse> {
+  const token = await getAuthToken();
+  return fetchAPI<WebSocketTicketResponse>(
+    `/rooms/${encodeURIComponent(code)}/ws-ticket`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
 }

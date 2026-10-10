@@ -3,7 +3,9 @@
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { motion, useInView, AnimatePresence } from 'framer-motion';
+import { motion, useInView, AnimatePresence, MotionConfig } from 'framer-motion';
+import { PhotoboothScene } from '@/components/landing/PhotoboothScene';
+import { HowItWorks } from '@/components/landing/HowItWorks';
 import { Navbar } from '@/components/common/Navbar';
 import { Footer } from '@/components/common/Footer';
 import { useRoomStore } from '@/stores/useRoomStore';
@@ -77,7 +79,7 @@ function SoloIllustration() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-secondary-container/20 rounded-full blur-2xl pointer-events-none" />
 
       {/* Tangible Physical Filmstrip Card */}
-      <div className="relative group max-w-[130px] w-full flex flex-col items-center drop-shadow-[0_8px_20px_rgba(0,0,0,0.14)] transition-transform duration-300 group-hover:scale-105">
+      <div className="landing-print relative group max-w-[130px] w-full flex flex-col items-center drop-shadow-[0_8px_20px_rgba(0,0,0,0.14)] transition-transform duration-300 group-hover:scale-105">
         <div className="w-full bg-surface-container-lowest p-2 rounded-xl border border-outline-variant/30 flex flex-col items-center">
           {/* Header Stamp */}
           <div className="w-full flex items-center justify-between text-[8px] font-mono font-bold uppercase tracking-wider text-secondary mb-1.5 px-0.5">
@@ -137,7 +139,7 @@ function DuoIllustration() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
 
       {/* Tangible Twin Companion Polaroid Card */}
-      <div className="relative group max-w-[200px] w-full bg-surface-container-lowest p-3 rounded-2xl border border-outline-variant/30 drop-shadow-[0_8px_20px_rgba(0,0,0,0.14)] transition-transform duration-300 group-hover:scale-105">
+      <div className="landing-print landing-print-duo relative group max-w-[200px] w-full bg-surface-container-lowest p-3 rounded-2xl border border-outline-variant/30 drop-shadow-[0_8px_20px_rgba(0,0,0,0.14)] transition-transform duration-300 group-hover:scale-105">
         {/* Header Ribbon */}
         <div className="flex items-center justify-between text-[8px] font-mono font-bold uppercase tracking-wider text-primary mb-2">
           <span>DUO SYNC</span>
@@ -356,7 +358,8 @@ export default function HomePage() {
   const currentFrame = SIGNATURE_FRAMES[activeFrameIndex];
 
   return (
-    <div className="bg-background font-body-md text-on-surface selection:bg-tertiary-fixed selection:text-tertiary min-h-screen flex flex-col">
+    <MotionConfig reducedMotion="user">
+    <div className="landing-page bg-background font-body-md text-on-surface selection:bg-tertiary-fixed selection:text-tertiary min-h-screen flex flex-col">
       {/* Universal Responsive Navbar */}
       <Navbar />
 
@@ -374,12 +377,17 @@ export default function HomePage() {
               }}
             />
 
-            <div className="max-w-7xl mx-auto px-margin flex flex-col items-center text-center pb-space-xl relative z-10">
+            <div className="max-w-7xl mx-auto px-margin grid lg:grid-cols-2 items-center gap-4 lg:gap-10 pb-space-md relative z-10">
+              <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+              <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-secondary/25 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-on-secondary-container">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+                Your browser. Your little photo studio.
+              </span>
 
               <motion.h1
                 variants={fadeUp}
                 custom={1}
-                className="font-headline-lg md:text-[56px] md:leading-[64px] lg:text-[64px] lg:leading-[72px] text-on-secondary-fixed tracking-tight max-w-3xl font-serif"
+                className="font-headline-lg text-[38px] leading-[44px] md:text-[56px] md:leading-[64px] lg:text-[60px] lg:leading-[66px] text-on-secondary-fixed tracking-tight max-w-3xl font-serif"
                 style={{ textWrap: 'balance', letterSpacing: '-0.02em' }}
               >
                 Capture your best moments in retro style
@@ -392,7 +400,7 @@ export default function HomePage() {
               >
                 A vintage-inspired digital photobooth right in your browser. Choose signature frames, snap spontaneous poses, apply 90s digicam filters, and print retro keepsake strips.
               </motion.p>
-              <motion.div variants={fadeUp} custom={3} className="mt-space-lg flex flex-wrap gap-3 justify-center">
+              <motion.div variants={fadeUp} custom={3} className="mt-space-lg flex flex-wrap gap-3 justify-center lg:justify-start">
                 <Link
                   className="inline-flex items-center gap-2 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md uppercase px-space-lg py-3.5 rounded-xl shadow-sm transition-all duration-200 active:scale-[0.98] font-bold"
                   href="/solo"
@@ -400,21 +408,27 @@ export default function HomePage() {
                   <span className="material-symbols-outlined text-[18px]">play_arrow</span>
                   <span>Start Snapping</span>
                 </Link>
-                <a
+                <button
+                  type="button"
                   className="inline-flex items-center gap-2 bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface font-label-md text-label-md px-space-lg py-3.5 rounded-xl border border-outline-variant/30 transition-all duration-200 hover:bg-surface-container-lowest hover:shadow-xs active:scale-[0.98] font-bold"
-                  href="#modes"
+                  onClick={handleCreateDuo}
+                  disabled={isCreatingRoom || isJoiningRoom}
                 >
-                  <span>Explore Modes</span>
-                  <span className="material-symbols-outlined text-[18px]">arrow_downward</span>
-                </a>
+                  {isCreatingRoom ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="material-symbols-outlined text-[18px]">group_add</span>}
+                  <span>{isCreatingRoom ? 'Creating Room…' : 'Create Duo Room'}</span>
+                </button>
                 <a
-                  className="inline-flex items-center gap-2 bg-surface-container-lowest/90 backdrop-blur-sm text-secondary font-label-md text-label-md px-space-lg py-3.5 rounded-xl border border-outline-variant/30 transition-all duration-200 hover:bg-surface-container-lowest hover:shadow-xs active:scale-[0.98] font-bold"
+                  className="inline-flex w-full items-center justify-center lg:justify-start gap-2 py-2 text-secondary text-sm font-bold underline decoration-secondary/40 underline-offset-4 transition-colors hover:text-primary"
                   href="#frames"
                 >
                   <span className="material-symbols-outlined text-[18px]">palette</span>
                   <span>View Frames</span>
                 </a>
               </motion.div>
+              <p className="mt-4 text-[12px] text-on-secondary-container">Solo starts instantly · Invite a friend for Duo</p>
+              {roomNotice && <p role="status" className="mt-2 text-sm text-on-secondary-fixed">{roomNotice}</p>}
+              </div>
+              <PhotoboothScene />
             </div>
 
             {/* Seamless Organic Wave Break into Linen Cream Body */}
@@ -429,6 +443,8 @@ export default function HomePage() {
               </svg>
             </div>
           </AnimatedSection>
+
+          <HowItWorks />
 
           {/* ========================================================================
               GRAPHIC EMBLEM / STAMP LOCKUP SECTION
@@ -696,7 +712,7 @@ export default function HomePage() {
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-center">
                     {/* Left Frame Visual Showcase (5 Cols) */}
                     <div className="lg:col-span-5 flex flex-col items-center justify-center p-4 bg-surface-container-low rounded-xl border border-surface-container shadow-inner">
-                      <div className="relative group max-w-[280px] w-full flex items-center justify-center py-2">
+                      <div className="landing-frame-stack relative group max-w-[280px] w-full flex items-center justify-center py-2">
                         {/* Authentic SVG Frame Asset from website public library */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
@@ -803,12 +819,15 @@ export default function HomePage() {
                 {SIGNATURE_FRAMES.map((item, idx) => {
                   const isSelected = idx === activeFrameIndex;
                   return (
-                    <motion.div
+                    <motion.button
                       key={item.id}
+                      type="button"
+                      aria-pressed={isSelected}
+                      aria-label={`Preview ${item.name}`}
                       variants={fadeUp}
                       custom={idx}
                       onClick={() => setActiveFrameIndex(idx)}
-                      className={`cursor-pointer rounded-xl p-3.5 border-2 transition-all duration-200 flex flex-col justify-between ${isSelected
+                      className={`cursor-pointer text-left rounded-xl p-3.5 border-2 transition-all duration-200 flex flex-col justify-between ${isSelected
                         ? 'bg-surface-container-lowest border-primary shadow-cobalt-sm scale-[1.02]'
                         : 'bg-surface-container-lowest/80 border-surface-container hover:border-primary/40 hover:-translate-y-1 hover:shadow-sm'
                         }`}
@@ -848,7 +867,7 @@ export default function HomePage() {
                           {isSelected ? 'check_circle' : 'touch_app'}
                         </span>
                       </div>
-                    </motion.div>
+                    </motion.button>
                   );
                 })}
               </div>
@@ -938,5 +957,6 @@ export default function HomePage() {
       {/* Shared Footer Component (hideWave=true since section above smoothly waves into Footer) */}
       <Footer hideWave />
     </div>
+    </MotionConfig>
   );
 }
