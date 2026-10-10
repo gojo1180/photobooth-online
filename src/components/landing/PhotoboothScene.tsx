@@ -2,22 +2,19 @@
 
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { motion, useInView, useMotionValue, useSpring } from 'framer-motion';
-import { useReducedMotionPreference } from './useReducedMotionPreference';
-import { Camera, Pause, Play, Sparkles } from 'lucide-react';
+import { Camera, Sparkles } from 'lucide-react';
 import styles from './PhotoboothScene.module.css';
 
 export function PhotoboothScene() {
   const sceneRef = useRef<HTMLDivElement>(null);
   const visible = useInView(sceneRef, { margin: '80px' });
-  const reducedMotion = useReducedMotionPreference();
-  const [paused, setPaused] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
   const [shots, setShots] = useState(0);
   const tiltX = useMotionValue(0);
   const tiltY = useMotionValue(0);
   const rotateX = useSpring(tiltX, { stiffness: 90, damping: 22 });
   const rotateY = useSpring(tiltY, { stiffness: 90, damping: 22 });
-  const active = visible && pageVisible && !paused && !reducedMotion;
+  const active = visible && pageVisible;
 
   useEffect(() => {
     const updateVisibility = () => setPageVisible(!document.hidden);
@@ -38,7 +35,7 @@ export function PhotoboothScene() {
   }
 
   return (
-    <div ref={sceneRef} className={styles.scene} data-active={active} data-still={Boolean(reducedMotion || paused)}>
+    <div ref={sceneRef} className={styles.scene} data-active={active} data-still="false">
       <div className={styles.stage} onPointerMove={moveScene} onPointerLeave={resetTilt}>
         <div className={styles.halo} aria-hidden="true" />
         <div className={styles.orbit} aria-hidden="true" />
@@ -87,15 +84,6 @@ export function PhotoboothScene() {
         </motion.div>
       </div>
 
-      <div className={styles.controls}>
-        <span className={styles.hint}><Sparkles size={14} aria-hidden="true" /> Try the shutter. Keep the feeling.</span>
-        <button type="button" className={styles.pause} disabled={Boolean(reducedMotion)} aria-pressed={paused || Boolean(reducedMotion)}
-          aria-label={reducedMotion ? 'Animations off: reduced motion enabled' : paused ? 'Resume scene animation' : 'Pause scene animation'}
-          onClick={() => { resetTilt(); setPaused((value) => !value); }}>
-          {paused || reducedMotion ? <Play size={14} aria-hidden="true" /> : <Pause size={14} aria-hidden="true" />}
-          <span>{reducedMotion ? 'Motion off' : paused ? 'Play' : 'Pause'}</span>
-        </button>
-      </div>
       <span className="sr-only" role="status">{shots > 0 ? `Demo photostrip ${shots} created. Start a Solo session to take your own photos.` : ''}</span>
     </div>
   );

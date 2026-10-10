@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, useInView, AnimatePresence, MotionConfig } from 'framer-motion';
-import { PhotoboothScene } from '@/components/landing/PhotoboothScene';
+import { PhotoboothHero } from '@/components/landing/PhotoboothHero';
 import { HowItWorks } from '@/components/landing/HowItWorks';
 import { Navbar } from '@/components/common/Navbar';
 import { Footer } from '@/components/common/Footer';
@@ -285,6 +285,7 @@ export default function HomePage() {
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [isJoiningRoom, setIsJoiningRoom] = useState(false);
   const [activeFrameIndex, setActiveFrameIndex] = useState(0);
+  const [duoPreview, setDuoPreview] = useState(false);
 
   const handleJoin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -359,604 +360,601 @@ export default function HomePage() {
 
   return (
     <MotionConfig reducedMotion="user">
-    <div className="landing-page bg-background font-body-md text-on-surface selection:bg-tertiary-fixed selection:text-tertiary min-h-screen flex flex-col">
-      {/* Universal Responsive Navbar */}
-      <Navbar />
+      <div className="landing-page bg-background font-body-md text-on-surface selection:bg-tertiary-fixed selection:text-tertiary min-h-screen flex flex-col">
+        {/* Universal Responsive Navbar */}
+        <Navbar />
 
-      <main className="w-full pt-16 md:pt-20 bg-background flex-1">
-        <div className="flex flex-col w-full">
-          {/* ========================================================================
+        <main className="w-full pt-16 md:pt-20 bg-background flex-1">
+          <div className="flex flex-col w-full">
+            {/* ========================================================================
               HERO TOP CURVED BANNER (Mustard Amber): with ambient glow + seamless wave
               ======================================================================== */}
-          <AnimatedSection className="relative w-full bg-secondary-container text-on-secondary-fixed pt-space-xl overflow-hidden">
-            {/* Ambient radial glow for depth */}
-            <div
-              className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] opacity-25 pointer-events-none"
-              style={{
-                background: 'radial-gradient(ellipse at center, rgba(254,161,43,0.35) 0%, transparent 65%)',
-              }}
-            />
+            <AnimatedSection className="relative w-full bg-secondary-container text-on-secondary-fixed pt-space-xl overflow-hidden">
+              {/* Ambient radial glow for depth */}
+              <div
+                className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] opacity-25 pointer-events-none"
+                style={{
+                  background: 'radial-gradient(ellipse at center, rgba(254,161,43,0.35) 0%, transparent 65%)',
+                }}
+              />
 
-            <div className="max-w-7xl mx-auto px-margin grid lg:grid-cols-2 items-center gap-4 lg:gap-10 pb-space-md relative z-10">
-              <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
-              <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-secondary/25 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-on-secondary-container">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
-                Your browser. Your little photo studio.
-              </span>
-
-              <motion.h1
-                variants={fadeUp}
-                custom={1}
-                className="font-headline-lg text-[38px] leading-[44px] md:text-[56px] md:leading-[64px] lg:text-[60px] lg:leading-[66px] text-on-secondary-fixed tracking-tight max-w-3xl font-serif"
-                style={{ textWrap: 'balance', letterSpacing: '-0.02em' }}
-              >
-                Capture your best moments in retro style
-              </motion.h1>
-              <motion.p
-                variants={fadeUp}
-                custom={2}
-                className="font-body-md text-body-md text-on-secondary-container max-w-lg mt-space-sm text-[16px] leading-[26px]"
-                style={{ textWrap: 'pretty' }}
-              >
-                A vintage-inspired digital photobooth right in your browser. Choose signature frames, snap spontaneous poses, apply 90s digicam filters, and print retro keepsake strips.
-              </motion.p>
-              <motion.div variants={fadeUp} custom={3} className="mt-space-lg flex flex-wrap gap-3 justify-center lg:justify-start">
-                <Link
-                  className="inline-flex items-center gap-2 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md uppercase px-space-lg py-3.5 rounded-xl shadow-sm transition-all duration-200 active:scale-[0.98] font-bold"
-                  href="/solo"
-                >
-                  <span className="material-symbols-outlined text-[18px]">play_arrow</span>
-                  <span>Start Snapping</span>
-                </Link>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface font-label-md text-label-md px-space-lg py-3.5 rounded-xl border border-outline-variant/30 transition-all duration-200 hover:bg-surface-container-lowest hover:shadow-xs active:scale-[0.98] font-bold"
-                  onClick={handleCreateDuo}
-                  disabled={isCreatingRoom || isJoiningRoom}
-                >
-                  {isCreatingRoom ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="material-symbols-outlined text-[18px]">group_add</span>}
-                  <span>{isCreatingRoom ? 'Creating Room…' : 'Create Duo Room'}</span>
-                </button>
-                <a
-                  className="inline-flex w-full items-center justify-center lg:justify-start gap-2 py-2 text-secondary text-sm font-bold underline decoration-secondary/40 underline-offset-4 transition-colors hover:text-primary"
-                  href="#frames"
-                >
-                  <span className="material-symbols-outlined text-[18px]">palette</span>
-                  <span>View Frames</span>
-                </a>
-              </motion.div>
-              <p className="mt-4 text-[12px] text-on-secondary-container">Solo starts instantly · Invite a friend for Duo</p>
-              {roomNotice && <p role="status" className="mt-2 text-sm text-on-secondary-fixed">{roomNotice}</p>}
-              </div>
-              <PhotoboothScene />
-            </div>
-
-            {/* Seamless Organic Wave Break into Linen Cream Body */}
-            <div className="w-full overflow-hidden leading-none -mb-[1px] select-none pointer-events-none">
-              <svg
-                className="w-full h-16 sm:h-20 md:h-28 lg:h-32 block fill-background"
-                preserveAspectRatio="none"
-                viewBox="0 0 1440 320"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M0,260L48,242C96,224,192,185,288,148C384,110,480,72,576,82C672,92,768,150,864,140C960,130,1056,54,1152,52C1248,54,1344,130,1392,170L1440,205L1440,320L0,320Z" />
-              </svg>
-            </div>
-          </AnimatedSection>
-
-          <HowItWorks />
-
-          {/* ========================================================================
-              GRAPHIC EMBLEM / STAMP LOCKUP SECTION
-              ======================================================================== */}
-          <AnimatedSection className="relative w-full bg-background pt-space-md pb-space-sm" delay={0.1}>
-            <div className="max-w-7xl mx-auto px-margin flex flex-col items-center justify-center">
-              {/* Curved Circular Stamp Badge */}
-              <motion.div variants={scaleIn} className="relative w-44 h-44 flex items-center justify-center -mt-10 select-none">
-                <svg
-                  className="w-full h-full animate-[spin_24s_linear_infinite]"
-                  viewBox="0 0 200 200"
-                >
-                  <defs>
-                    <path
-                      d="M 100, 100 m -70, 0 a 70,70 0 1,1 140,0 a 70,70 0 1,1 -140,0"
-                      fill="none"
-                      id="circleTextPath"
-                    />
-                  </defs>
-                  <text className="font-label-md text-[13px] fill-secondary font-bold uppercase tracking-[0.24em]">
-                    <textPath href="#circleTextPath" startOffset="0%">
-                      Snapbooth Studio • Pure Joy In Every Shot •
-                    </textPath>
-                  </text>
-                </svg>
-                {/* Center Cobalt Starburst */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-18 h-18 rounded-full bg-primary flex items-center justify-center shadow-xs" style={{ width: '72px', height: '72px' }}>
-                    <svg className="w-9 h-9 fill-surface-bright" viewBox="0 0 24 24">
-                      <path d="M12 0L14.2 8.5L22.6 6.1L17.2 13L23.8 17.5L15.3 18.2L16.2 24L10.7 19.3L6 24L7.5 17.8L0 18.2L5.8 13.5L0.2 7.1L8.5 8.7L9.5 0.5L12 0Z" />
-                    </svg>
-                  </div>
-                </div>
-              </motion.div>
-              <motion.div variants={fadeUp} custom={0} className="mt-space-xs text-center" id="modes">
-                <span className="font-label-sm text-label-sm uppercase tracking-widest text-primary font-bold">
-                  Studio Capture Modes
-                </span>
-                <h2
-                  className="font-headline-lg text-headline-lg text-on-surface mt-1 font-serif"
-                  style={{ textWrap: 'balance' }}
-                >
-                  Choose how you want to shoot
-                </h2>
-              </motion.div>
-            </div>
-          </AnimatedSection>
-
-          {/* ========================================================================
-              DUAL MAIN SERVICE CARDS: SOLO & ONLINE DUO ROOM
-              ======================================================================== */}
-          <AnimatedSection className="w-full bg-background py-space-lg">
-            <div className="max-w-7xl mx-auto px-margin">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-gutter max-w-5xl mx-auto items-stretch">
-                {/* CARD 1: SOLO PHOTOBOOTH */}
-                <motion.div
-                  variants={fadeUp}
-                  custom={0}
-                  className="card-spotlight bg-surface-container-lowest rounded-2xl p-space-lg flex flex-col justify-between shadow-sm border border-outline-variant/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
-                >
-                  <div>
-                    <SoloIllustration />
-                    {/* Content */}
-                    <div className="mt-space-md">
-                      <span className="font-label-sm text-label-sm text-secondary uppercase tracking-widest font-bold">
-                        Option 01
-                      </span>
-                      <h3 className="font-headline-md text-headline-md text-primary mt-1 font-serif">
-                        Solo Photobooth
-                      </h3>
-                      <p className="font-body-md text-body-md text-on-surface-variant mt-space-xs" style={{ textWrap: 'pretty' }}>
-                        An unrushed studio session at your own pace. Pose freely, try spontaneous expressions, and create vintage keepsake photostrips.
-                      </p>
-                      <ul className="mt-space-md flex flex-col gap-2.5 font-body-sm text-body-sm text-on-surface">
-                        <li className="flex items-start gap-2">
-                          <span className="material-symbols-outlined text-secondary text-[18px] mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                          <span>Flexible shutter timer: 3s, 5s, or 10s intervals</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="material-symbols-outlined text-secondary text-[18px] mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                          <span>Authentic retro filters: Digicam Glow, B&amp;W 90s, and Warm Grain</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="material-symbols-outlined text-secondary text-[18px] mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                          <span>Iconic 3-pose strip, 2×2 square grid, or mini collage formats</span>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                  {/* CTA: pinned to bottom */}
-                  <div className="pt-space-lg mt-auto">
+              <div className="max-w-7xl mx-auto px-margin grid lg:grid-cols-2 items-center gap-4 lg:gap-10 pb-space-md relative z-10">
+                <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+                  <motion.h1
+                    variants={fadeUp}
+                    custom={1}
+                    className="font-headline-lg text-[38px] leading-[44px] md:text-[56px] md:leading-[64px] lg:text-[60px] lg:leading-[66px] text-on-secondary-fixed tracking-tight max-w-3xl font-serif"
+                    style={{ textWrap: 'balance', letterSpacing: '-0.02em' }}
+                  >
+                    Capture your best moments in retro style
+                  </motion.h1>
+                  <motion.p
+                    variants={fadeUp}
+                    custom={2}
+                    className="font-body-md text-body-md text-on-secondary-container max-w-lg mt-space-sm text-[16px] leading-[26px]"
+                    style={{ textWrap: 'pretty' }}
+                  >
+                    A vintage-inspired digital photobooth right in your browser. Choose signature frames, snap spontaneous poses, apply 90s digicam filters, and print retro keepsake strips.
+                  </motion.p>
+                  <motion.div variants={fadeUp} custom={3} className="mt-space-lg flex flex-wrap gap-3 justify-center lg:justify-start">
                     <Link
-                      className="w-full inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md uppercase py-3.5 px-space-md rounded-xl shadow-xs transition-all duration-200 active:scale-[0.98] text-center font-bold"
+                      className="inline-flex items-center gap-2 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md uppercase px-space-lg py-3.5 rounded-xl shadow-sm transition-all duration-200 active:scale-[0.98] font-bold"
                       href="/solo"
                     >
-                      <span>Start Solo Session</span>
-                      <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                      <span className="material-symbols-outlined text-[18px]">play_arrow</span>
+                      <span>Start Snapping</span>
                     </Link>
-                  </div>
-                </motion.div>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface font-label-md text-label-md px-space-lg py-3.5 rounded-xl border border-outline-variant/30 transition-all duration-200 hover:bg-surface-container-lowest hover:shadow-xs active:scale-[0.98] font-bold"
+                      onClick={handleCreateDuo}
+                      onMouseEnter={() => setDuoPreview(true)}
+                      onMouseLeave={() => setDuoPreview(false)}
+                      onFocus={() => setDuoPreview(true)}
+                      onBlur={() => setDuoPreview(false)}
+                      disabled={isCreatingRoom || isJoiningRoom}
+                    >
+                      {isCreatingRoom ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="material-symbols-outlined text-[18px]">group_add</span>}
+                      <span>{isCreatingRoom ? 'Creating Room…' : 'Create Duo Room'}</span>
+                    </button>
+                    <a
+                      className="inline-flex w-full items-center justify-center lg:justify-start gap-2 py-2 text-secondary text-sm font-bold underline decoration-secondary/40 underline-offset-4 transition-colors hover:text-primary"
+                      href="#frames"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">palette</span>
+                      <span>View Frames</span>
+                    </a>
+                  </motion.div>
+                </div>
+                <PhotoboothHero duoPreview={duoPreview} />
+              </div>
 
-                {/* CARD 2: ONLINE DUO ROOM */}
-                <motion.div
-                  variants={fadeUp}
-                  custom={1}
-                  className="card-spotlight bg-surface-container-lowest rounded-2xl p-space-lg flex flex-col justify-between shadow-sm border border-outline-variant/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+              {/* Seamless Organic Wave Break into Linen Cream Body */}
+              <div className="w-full overflow-hidden leading-none -mb-[1px] select-none pointer-events-none">
+                <svg
+                  className="w-full h-16 sm:h-20 md:h-28 lg:h-32 block fill-background"
+                  preserveAspectRatio="none"
+                  viewBox="0 0 1440 320"
+                  xmlns="http://www.w3.org/2000/svg"
                 >
-                  <div>
-                    <DuoIllustration />
-                    {/* Content */}
-                    <div className="mt-space-md">
-                      <span className="font-label-sm text-label-sm text-secondary uppercase tracking-widest font-bold">
-                        Option 02
-                      </span>
-                      <h3 className="font-headline-md text-headline-md text-primary mt-1 font-serif">
-                        Online Duo Room
-                      </h3>
-                      <p className="font-body-md text-body-md text-on-surface-variant mt-space-xs" style={{ textWrap: 'pretty' }}>
-                        Connect your photobooth with a friend anywhere in the world using a private code. Synchronized countdown, live side-by-side feed, and twin collage prints.
-                      </p>
-                      <ul className="mt-space-md flex flex-col gap-2.5 font-body-sm text-body-sm text-on-surface">
-                        <li className="flex items-start gap-2">
-                          <span className="material-symbols-outlined text-secondary text-[18px] mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                          <span>Real-time side-by-side synchronized video streams</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="material-symbols-outlined text-secondary text-[18px] mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                          <span>Simultaneous countdown for perfectly timed poses</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="material-symbols-outlined text-secondary text-[18px] mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                          <span>Automatic dual-screen collage merged into one physical print</span>
-                        </li>
-                      </ul>
-                      {/* Duo Interactive Code Join Box */}
-                      <div className="mt-space-md p-space-sm bg-surface-container-low rounded-xl border border-surface-container">
-                        <label
-                          className="block font-label-sm text-label-sm text-on-surface-variant mb-1.5 font-bold"
-                          htmlFor="duoCode"
-                        >
-                          Have a friend&apos;s room code?
-                        </label>
-                        <form onSubmit={handleJoin} className="flex items-center gap-2">
-                          <input
-                            className="flex-1 px-3 py-2.5 bg-surface-container-lowest font-headline-md text-[14px] text-on-surface rounded-lg uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-outline/40 border border-surface-container transition-all duration-200 focus:shadow-[0_0_0_3px_rgba(0,28,151,0.1)] focus:border-primary/30 disabled:opacity-60"
-                            id="duoCode"
-                            maxLength={10}
-                            placeholder="PB-ABC123"
-                            type="text"
-                            value={duoCode}
-                            disabled={isJoiningRoom || isCreatingRoom}
-                            onChange={(e) => setDuoCode(e.target.value.toUpperCase())}
-                          />
-                          <button
-                            className="px-4 py-2.5 bg-secondary-container hover:bg-secondary text-on-secondary-fixed hover:text-on-secondary font-label-md text-label-md uppercase rounded-lg transition-all duration-200 active:scale-[0.97] font-bold cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
-                            id="joinRoomBtn"
-                            type="submit"
-                            disabled={isJoiningRoom || isCreatingRoom}
-                          >
-                            {isJoiningRoom && <Loader2 className="w-4 h-4 animate-spin" />}
-                            <span>Join</span>
-                          </button>
-                        </form>
-                        {roomNotice && (
-                          <motion.p
-                            initial={{ opacity: 0, y: -4 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="font-body-sm text-body-sm text-secondary mt-2 font-bold"
-                            id="roomNotice"
-                          >
-                            {roomNotice}
-                          </motion.p>
-                        )}
-                      </div>
+                  <path d="M0,260L48,242C96,224,192,185,288,148C384,110,480,72,576,82C672,92,768,150,864,140C960,130,1056,54,1152,52C1248,54,1344,130,1392,170L1440,205L1440,320L0,320Z" />
+                </svg>
+              </div>
+            </AnimatedSection>
+
+            <HowItWorks />
+
+            {/* ========================================================================
+              GRAPHIC EMBLEM / STAMP LOCKUP SECTION
+              ======================================================================== */}
+            <AnimatedSection className="relative w-full bg-background pt-space-md pb-space-sm" delay={0.1}>
+              <div className="max-w-7xl mx-auto px-margin flex flex-col items-center justify-center">
+                {/* Curved Circular Stamp Badge */}
+                <motion.div variants={scaleIn} className="relative w-44 h-44 flex items-center justify-center -mt-10 select-none">
+                  <svg
+                    className="w-full h-full animate-[spin_24s_linear_infinite]"
+                    viewBox="0 0 200 200"
+                  >
+                    <defs>
+                      <path
+                        d="M 100, 100 m -70, 0 a 70,70 0 1,1 140,0 a 70,70 0 1,1 -140,0"
+                        fill="none"
+                        id="circleTextPath"
+                      />
+                    </defs>
+                    <text className="font-label-md text-[13px] fill-secondary font-bold uppercase tracking-[0.24em]">
+                      <textPath href="#circleTextPath" startOffset="0%">
+                        Snapbooth Studio • Pure Joy In Every Shot •
+                      </textPath>
+                    </text>
+                  </svg>
+                  {/* Center Cobalt Starburst */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-18 h-18 rounded-full bg-primary flex items-center justify-center shadow-xs" style={{ width: '72px', height: '72px' }}>
+                      <svg className="w-9 h-9 fill-surface-bright" viewBox="0 0 24 24">
+                        <path d="M12 0L14.2 8.5L22.6 6.1L17.2 13L23.8 17.5L15.3 18.2L16.2 24L10.7 19.3L6 24L7.5 17.8L0 18.2L5.8 13.5L0.2 7.1L8.5 8.7L9.5 0.5L12 0Z" />
+                      </svg>
                     </div>
                   </div>
-                  {/* CTA: pinned to bottom */}
-                  <div className="pt-space-md mt-auto">
-                    <button
-                      className="w-full inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md uppercase py-3.5 px-space-md rounded-xl shadow-xs transition-all duration-200 active:scale-[0.98] cursor-pointer font-bold disabled:opacity-60 disabled:cursor-not-allowed"
-                      id="createDuoBtn"
-                      type="button"
-                      disabled={isCreatingRoom || isJoiningRoom}
-                      onClick={handleCreateDuo}
-                    >
-                      {isCreatingRoom ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          <span>Creating Room...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Create Duo Room</span>
-                          <span className="material-symbols-outlined text-[18px]">group_add</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+                </motion.div>
+                <motion.div variants={fadeUp} custom={0} className="mt-space-xs text-center" id="modes">
+                  <span className="font-label-sm text-label-sm uppercase tracking-widest text-primary font-bold">
+                    Studio Capture Modes
+                  </span>
+                  <h2
+                    className="font-headline-lg text-headline-lg text-on-surface mt-1 font-serif"
+                    style={{ textWrap: 'balance' }}
+                  >
+                    Choose how you want to shoot
+                  </h2>
                 </motion.div>
               </div>
-            </div>
-          </AnimatedSection>
+            </AnimatedSection>
 
-          {/* ========================================================================
+            {/* ========================================================================
+              DUAL MAIN SERVICE CARDS: SOLO & ONLINE DUO ROOM
+              ======================================================================== */}
+            <AnimatedSection className="w-full bg-background py-space-lg">
+              <div className="max-w-7xl mx-auto px-margin">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-gutter max-w-5xl mx-auto items-stretch">
+                  {/* CARD 1: SOLO PHOTOBOOTH */}
+                  <motion.div
+                    variants={fadeUp}
+                    custom={0}
+                    className="card-spotlight bg-surface-container-lowest rounded-2xl p-space-lg flex flex-col justify-between shadow-sm border border-outline-variant/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+                  >
+                    <div>
+                      <SoloIllustration />
+                      {/* Content */}
+                      <div className="mt-space-md">
+                        <span className="font-label-sm text-label-sm text-secondary uppercase tracking-widest font-bold">
+                          Option 01
+                        </span>
+                        <h3 className="font-headline-md text-headline-md text-primary mt-1 font-serif">
+                          Solo Photobooth
+                        </h3>
+                        <p className="font-body-md text-body-md text-on-surface-variant mt-space-xs" style={{ textWrap: 'pretty' }}>
+                          An unrushed studio session at your own pace. Pose freely, try spontaneous expressions, and create vintage keepsake photostrips.
+                        </p>
+                        <ul className="mt-space-md flex flex-col gap-2.5 font-body-sm text-body-sm text-on-surface">
+                          <li className="flex items-start gap-2">
+                            <span className="material-symbols-outlined text-secondary text-[18px] mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                            <span>Flexible shutter timer: 3s, 5s, or 10s intervals</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="material-symbols-outlined text-secondary text-[18px] mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                            <span>Authentic retro filters: Digicam Glow, B&amp;W 90s, and Warm Grain</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="material-symbols-outlined text-secondary text-[18px] mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                            <span>Iconic 3-pose strip, 2×2 square grid, or mini collage formats</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                    {/* CTA: pinned to bottom */}
+                    <div className="pt-space-lg mt-auto">
+                      <Link
+                        className="w-full inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md uppercase py-3.5 px-space-md rounded-xl shadow-xs transition-all duration-200 active:scale-[0.98] text-center font-bold"
+                        href="/solo"
+                      >
+                        <span>Start Solo Session</span>
+                        <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                      </Link>
+                    </div>
+                  </motion.div>
+
+                  {/* CARD 2: ONLINE DUO ROOM */}
+                  <motion.div
+                    variants={fadeUp}
+                    custom={1}
+                    className="card-spotlight bg-surface-container-lowest rounded-2xl p-space-lg flex flex-col justify-between shadow-sm border border-outline-variant/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+                  >
+                    <div>
+                      <DuoIllustration />
+                      {/* Content */}
+                      <div className="mt-space-md">
+                        <span className="font-label-sm text-label-sm text-secondary uppercase tracking-widest font-bold">
+                          Option 02
+                        </span>
+                        <h3 className="font-headline-md text-headline-md text-primary mt-1 font-serif">
+                          Online Duo Room
+                        </h3>
+                        <p className="font-body-md text-body-md text-on-surface-variant mt-space-xs" style={{ textWrap: 'pretty' }}>
+                          Connect your photobooth with a friend anywhere in the world using a private code. Synchronized countdown, live side-by-side feed, and twin collage prints.
+                        </p>
+                        <ul className="mt-space-md flex flex-col gap-2.5 font-body-sm text-body-sm text-on-surface">
+                          <li className="flex items-start gap-2">
+                            <span className="material-symbols-outlined text-secondary text-[18px] mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                            <span>Real-time side-by-side synchronized video streams</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="material-symbols-outlined text-secondary text-[18px] mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                            <span>Simultaneous countdown for perfectly timed poses</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="material-symbols-outlined text-secondary text-[18px] mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                            <span>Automatic dual-screen collage merged into one physical print</span>
+                          </li>
+                        </ul>
+                        {/* Duo Interactive Code Join Box */}
+                        <div className="mt-space-md p-space-sm bg-surface-container-low rounded-xl border border-surface-container">
+                          <label
+                            className="block font-label-sm text-label-sm text-on-surface-variant mb-1.5 font-bold"
+                            htmlFor="duoCode"
+                          >
+                            Have a friend&apos;s room code?
+                          </label>
+                          <form onSubmit={handleJoin} className="flex items-center gap-2">
+                            <input
+                              className="flex-1 px-3 py-2.5 bg-surface-container-lowest font-headline-md text-[14px] text-on-surface rounded-lg uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-outline/40 border border-surface-container transition-all duration-200 focus:shadow-[0_0_0_3px_rgba(0,28,151,0.1)] focus:border-primary/30 disabled:opacity-60"
+                              id="duoCode"
+                              maxLength={10}
+                              placeholder="PB-ABC123"
+                              type="text"
+                              value={duoCode}
+                              disabled={isJoiningRoom || isCreatingRoom}
+                              onChange={(e) => setDuoCode(e.target.value.toUpperCase())}
+                            />
+                            <button
+                              className="px-4 py-2.5 bg-secondary-container hover:bg-secondary text-on-secondary-fixed hover:text-on-secondary font-label-md text-label-md uppercase rounded-lg transition-all duration-200 active:scale-[0.97] font-bold cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
+                              id="joinRoomBtn"
+                              type="submit"
+                              disabled={isJoiningRoom || isCreatingRoom}
+                            >
+                              {isJoiningRoom && <Loader2 className="w-4 h-4 animate-spin" />}
+                              <span>Join</span>
+                            </button>
+                          </form>
+                          {roomNotice && (
+                            <motion.p
+                              initial={{ opacity: 0, y: -4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="font-body-sm text-body-sm text-secondary mt-2 font-bold"
+                              id="roomNotice"
+                            >
+                              {roomNotice}
+                            </motion.p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {/* CTA: pinned to bottom */}
+                    <div className="pt-space-md mt-auto">
+                      <button
+                        className="w-full inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md uppercase py-3.5 px-space-md rounded-xl shadow-xs transition-all duration-200 active:scale-[0.98] cursor-pointer font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+                        id="createDuoBtn"
+                        type="button"
+                        disabled={isCreatingRoom || isJoiningRoom}
+                        onClick={handleCreateDuo}
+                      >
+                        {isCreatingRoom ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span>Creating Room...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Create Duo Room</span>
+                            <span className="material-symbols-outlined text-[18px]">group_add</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
+              </div>
+            </AnimatedSection>
+
+            {/* ========================================================================
               SECTION: SIGNATURE FRAME COLLECTION SHOWCASE
               ======================================================================== */}
-          <AnimatedSection id="frames" className="w-full bg-background py-space-xl relative overflow-hidden" delay={0.1}>
-            {/* Subtle background ambient graphic */}
-            <div className="absolute top-10 right-10 w-96 h-96 rounded-full bg-secondary-container/15 blur-3xl pointer-events-none" />
-            <div className="absolute bottom-10 left-10 w-80 h-80 rounded-full bg-tertiary-fixed/20 blur-3xl pointer-events-none" />
+            <AnimatedSection id="frames" className="w-full bg-background py-space-xl relative overflow-hidden" delay={0.1}>
+              {/* Subtle background ambient graphic */}
+              <div className="absolute top-10 right-10 w-96 h-96 rounded-full bg-secondary-container/15 blur-3xl pointer-events-none" />
+              <div className="absolute bottom-10 left-10 w-80 h-80 rounded-full bg-tertiary-fixed/20 blur-3xl pointer-events-none" />
 
-            <div className="max-w-7xl mx-auto px-margin relative z-10">
-              {/* Header Badge & Title */}
-              <div className="flex flex-col items-center text-center mb-space-xl">
+              <div className="max-w-7xl mx-auto px-margin relative z-10">
+                {/* Header Badge & Title */}
+                <div className="flex flex-col items-center text-center mb-space-xl">
 
+                  <motion.h2
+                    variants={fadeUp}
+                    custom={1}
+                    className="font-headline-lg text-headline-lg md:text-[44px] md:leading-[52px] text-primary tracking-tight max-w-2xl font-serif"
+                    style={{ textWrap: 'balance' }}
+                  >
+                    Curated Retro Frames for Every Memory
+                  </motion.h2>
+                  <motion.p
+                    variants={fadeUp}
+                    custom={2}
+                    className="font-body-md text-body-md text-on-surface-variant max-w-xl mt-space-xs"
+                    style={{ textWrap: 'pretty' }}
+                  >
+                    Every snapshot deserves an artisanal border. Explore our authentic vector scrapbook frames, each crafted with custom stickers, archival stamps, and nostalgic typography.
+                  </motion.p>
+
+                  {/* Interactive Frame Tab Bar */}
+                  <motion.div variants={fadeUp} custom={3} className="mt-space-lg flex flex-wrap gap-2 justify-center max-w-3xl">
+                    {SIGNATURE_FRAMES.map((frame, index) => {
+                      const isActive = index === activeFrameIndex;
+                      return (
+                        <button
+                          key={frame.id}
+                          type="button"
+                          onClick={() => setActiveFrameIndex(index)}
+                          className={`px-4 py-2 rounded-full font-label-md text-label-md uppercase tracking-wider transition-all duration-200 cursor-pointer font-bold flex items-center gap-2 ${isActive
+                            ? 'bg-primary text-on-primary shadow-dark scale-105'
+                            : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-outline-variant/30'
+                            }`}
+                        >
+                          <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-secondary-fixed' : 'bg-primary/40'}`} />
+                          <span>{frame.name}</span>
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                </div>
+
+                {/* Main Featured Interactive Showcase Card */}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentFrame.id}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -16 }}
+                    transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                    className="max-w-5xl mx-auto bg-surface-container-lowest rounded-2xl border-2 border-primary/20 shadow-cobalt p-space-md md:p-space-lg"
+                  >
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-center">
+                      {/* Left Frame Visual Showcase (5 Cols) */}
+                      <div className="lg:col-span-5 flex flex-col items-center justify-center p-4 bg-surface-container-low rounded-xl border border-surface-container shadow-inner">
+                        <div className="landing-frame-stack relative group max-w-[280px] w-full flex items-center justify-center py-2">
+                          {/* Authentic SVG Frame Asset from website public library */}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={currentFrame.assetUrl}
+                            alt={currentFrame.name}
+                            className="w-full max-h-[440px] object-contain drop-shadow-[4px_6px_12px_rgba(0,0,0,0.18)] transition-transform duration-300 group-hover:scale-[1.02]"
+                          />
+
+                          {/* Hover Overlay Hint */}
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-primary/20 backdrop-blur-[1px] rounded-lg">
+                            <span className="bg-primary text-on-primary px-3 py-1.5 rounded-full font-label-sm text-label-sm uppercase font-bold shadow-md flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-[16px]">visibility</span>
+                              Full Vector SVG
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Frame Dimension Footer */}
+                        <div className="mt-3 inline-flex items-center gap-2 text-xs font-label-sm text-on-surface-variant font-bold uppercase tracking-wider">
+                          <span className="material-symbols-outlined text-secondary text-[16px]">aspect_ratio</span>
+                          <span>{currentFrame.printSize} • {currentFrame.poses} Poses</span>
+                        </div>
+                      </div>
+
+                      {/* Right Specs & Info (7 Cols) */}
+                      <div className="lg:col-span-7 flex flex-col justify-between h-full pl-0 lg:pl-4">
+                        <div>
+                          {/* Badge Row */}
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`px-3 py-1 rounded-full font-label-sm text-label-sm uppercase font-extrabold shadow-xs ${currentFrame.tagBg} ${currentFrame.tagText}`}>
+                              {currentFrame.tag}
+                            </span>
+                            <span className="text-secondary font-label-sm text-label-sm uppercase tracking-wider font-bold">
+                              {currentFrame.styleVibe}
+                            </span>
+                          </div>
+
+                          {/* Title & Description */}
+                          <h3 className="font-headline-lg text-headline-lg text-primary font-serif">
+                            {currentFrame.name}
+                          </h3>
+                          <p className="font-body-md text-body-md text-on-surface-variant mt-2 leading-relaxed" style={{ textWrap: 'pretty' }}>
+                            {currentFrame.description}
+                          </p>
+
+                          {/* Feature Badges Grid */}
+                          <div className="mt-space-md grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            {currentFrame.features.map((feature, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-center gap-2 bg-surface-container-low px-3 py-2 rounded-lg border border-surface-container"
+                              >
+                                <span className="material-symbols-outlined text-secondary text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                                  check_circle
+                                </span>
+                                <span className="font-body-sm text-body-sm text-on-surface font-medium">
+                                  {feature}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Tech Spec Highlights */}
+                          <div className="mt-space-md p-3.5 bg-secondary-container/20 rounded-xl border border-secondary-container/40 flex flex-wrap items-center justify-between gap-3 text-xs font-label-sm text-on-surface">
+                            <div className="flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-primary text-[18px]">verified</span>
+                              <span><strong>Zero Cloud Storage:</strong> Client-side render</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-secondary text-[18px]">auto_awesome</span>
+                              <span><strong>Resolution:</strong> 300 DPI Ultra Clear</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-tertiary text-[18px]">gif</span>
+                              <span><strong>Animated GIF:</strong> Auto-compiled</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action Row */}
+                        <div className="mt-space-lg pt-space-sm flex flex-wrap items-center gap-3">
+                          <Link
+                            href="/solo"
+                            className="inline-flex items-center gap-2 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md uppercase px-space-lg py-3.5 rounded-lg shadow-dark transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] font-bold"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">photo_camera</span>
+                            <span>Snap With This Frame</span>
+                          </Link>
+                          <Link
+                            href="/solo"
+                            className="inline-flex items-center gap-2 bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md uppercase px-space-md py-3.5 rounded-lg border border-surface-container transition-all duration-200 font-bold"
+                          >
+                            <span>Explore All Presets</span>
+                            <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* 4 Cards Grid: Side-by-Side Gallery Overview */}
+                <div className="mt-space-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter max-w-5xl mx-auto">
+                  {SIGNATURE_FRAMES.map((item, idx) => {
+                    const isSelected = idx === activeFrameIndex;
+                    return (
+                      <motion.button
+                        key={item.id}
+                        type="button"
+                        aria-pressed={isSelected}
+                        aria-label={`Preview ${item.name}`}
+                        variants={fadeUp}
+                        custom={idx}
+                        onClick={() => setActiveFrameIndex(idx)}
+                        className={`cursor-pointer text-left rounded-xl p-3.5 border-2 transition-all duration-200 flex flex-col justify-between ${isSelected
+                          ? 'bg-surface-container-lowest border-primary shadow-cobalt-sm scale-[1.02]'
+                          : 'bg-surface-container-lowest/80 border-surface-container hover:border-primary/40 hover:-translate-y-1 hover:shadow-sm'
+                          }`}
+                      >
+                        {/* Mini Thumbnail */}
+                        <div className="w-full h-44 bg-surface-container-low rounded-lg p-2 flex items-center justify-center overflow-hidden mb-3 border border-surface-container">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={item.assetUrl}
+                            alt={item.name}
+                            className="h-full object-contain drop-shadow-sm transition-transform duration-300 group-hover:scale-105"
+                          />
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] uppercase font-bold tracking-widest text-secondary">
+                              {item.poses} Poses
+                            </span>
+                            <span className={`text-[9px] uppercase font-bold px-2 py-0.5 rounded-full ${item.tagBg} ${item.tagText}`}>
+                              {item.tag}
+                            </span>
+                          </div>
+                          <h4 className="font-headline-md text-[15px] text-primary font-bold line-clamp-1">
+                            {item.name}
+                          </h4>
+                          <p className="font-body-sm text-[12px] text-on-surface-variant mt-1 line-clamp-2">
+                            {item.layout}
+                          </p>
+                        </div>
+
+                        <div className="mt-3 pt-2 border-t border-surface-container flex items-center justify-between text-xs font-label-sm">
+                          <span className="text-primary font-bold">
+                            {isSelected ? 'Active Preview' : 'Click to Inspect'}
+                          </span>
+                          <span className="material-symbols-outlined text-[16px] text-primary">
+                            {isSelected ? 'check_circle' : 'touch_app'}
+                          </span>
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+            </AnimatedSection>
+
+            {/* ========================================================================
+              FINAL CTA BANNER: Connected with seamless wave transitions
+              ======================================================================== */}
+            <AnimatedSection className="relative w-full bg-tertiary-fixed text-on-tertiary-fixed py-24 sm:py-28 md:py-36 overflow-hidden">
+              {/* Top Organic Wave Divider: Transitioning from cream linen into sweet pink */}
+              <div className="w-full overflow-hidden leading-none absolute -top-1 left-0 right-0 select-none pointer-events-none z-20">
+                <svg
+                  className="w-full h-16 sm:h-20 md:h-28 lg:h-32 block fill-background"
+                  preserveAspectRatio="none"
+                  viewBox="0 0 1440 320"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M0,260L48,242C96,224,192,185,288,148C384,110,480,72,576,82C672,92,768,150,864,140C960,130,1056,54,1152,52C1248,54,1344,130,1392,170L1440,205L1440,0L0,0Z" />
+                </svg>
+              </div>
+
+              {/* Ambient gradients */}
+              <div
+                className="absolute right-0 top-0 w-[400px] h-[400px] opacity-20 pointer-events-none"
+                style={{
+                  background: 'radial-gradient(circle, rgba(254,174,222,0.5) 0%, transparent 60%)',
+                }}
+              />
+              <div
+                className="absolute left-0 bottom-0 w-[300px] h-[300px] opacity-15 pointer-events-none"
+                style={{
+                  background: 'radial-gradient(circle, rgba(84,27,68,0.15) 0%, transparent 60%)',
+                }}
+              />
+
+              <div className="max-w-7xl mx-auto px-margin flex flex-col items-center text-center relative z-10">
+                <motion.span
+                  variants={fadeUp}
+                  custom={0}
+                  className="font-label-md text-label-md text-tertiary tracking-widest font-bold mb-2 inline-block uppercase"
+                >
+                  Get your best smile ready
+                </motion.span>
                 <motion.h2
                   variants={fadeUp}
                   custom={1}
-                  className="font-headline-lg text-headline-lg md:text-[44px] md:leading-[52px] text-primary tracking-tight max-w-2xl font-serif"
-                  style={{ textWrap: 'balance' }}
+                  className="font-headline-lg text-headline-lg md:text-[46px] md:leading-[54px] text-tertiary tracking-tight font-serif"
+                  style={{ textWrap: 'balance', letterSpacing: '-0.02em' }}
                 >
-                  Curated Retro Frames for Every Memory
+                  Let&apos;s create some magic.
                 </motion.h2>
                 <motion.p
                   variants={fadeUp}
                   custom={2}
-                  className="font-body-md text-body-md text-on-surface-variant max-w-xl mt-space-xs"
+                  className="font-body-md text-body-md text-on-tertiary-fixed-variant max-w-md mt-space-xs mb-space-lg"
                   style={{ textWrap: 'pretty' }}
                 >
-                  Every snapshot deserves an artisanal border. Explore our authentic vector scrapbook frames, each crafted with custom stickers, archival stamps, and nostalgic typography.
+                  Turn on your camera, pick your signature frame, and capture memorable keepsake strips right now.
                 </motion.p>
-
-                {/* Interactive Frame Tab Bar */}
-                <motion.div variants={fadeUp} custom={3} className="mt-space-lg flex flex-wrap gap-2 justify-center max-w-3xl">
-                  {SIGNATURE_FRAMES.map((frame, index) => {
-                    const isActive = index === activeFrameIndex;
-                    return (
-                      <button
-                        key={frame.id}
-                        type="button"
-                        onClick={() => setActiveFrameIndex(index)}
-                        className={`px-4 py-2 rounded-full font-label-md text-label-md uppercase tracking-wider transition-all duration-200 cursor-pointer font-bold flex items-center gap-2 ${isActive
-                          ? 'bg-primary text-on-primary shadow-dark scale-105'
-                          : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-outline-variant/30'
-                          }`}
-                      >
-                        <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-secondary-fixed' : 'bg-primary/40'}`} />
-                        <span>{frame.name}</span>
-                      </button>
-                    );
-                  })}
+                <motion.div variants={fadeUp} custom={3} className="flex flex-wrap gap-3 justify-center">
+                  <Link
+                    className="inline-flex items-center gap-2 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md uppercase px-space-lg py-4 rounded-lg shadow-sm hover:shadow-lg hover:shadow-primary/20 transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] font-bold"
+                    href="/solo"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">play_arrow</span>
+                    <span>Start Photobooth Now</span>
+                  </Link>
                 </motion.div>
               </div>
 
-              {/* Main Featured Interactive Showcase Card */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentFrame.id}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -16 }}
-                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                  className="max-w-5xl mx-auto bg-surface-container-lowest rounded-2xl border-2 border-primary/20 shadow-cobalt p-space-md md:p-space-lg"
+              {/* Bottom Organic Wave Divider: Transitioning smoothly from sweet pink into Footer background */}
+              <div className="w-full overflow-hidden leading-none absolute -bottom-1 left-0 right-0 select-none pointer-events-none z-20">
+                <svg
+                  className="w-full h-16 sm:h-20 md:h-28 lg:h-32 block fill-surface-container-low"
+                  preserveAspectRatio="none"
+                  viewBox="0 0 1440 320"
+                  xmlns="http://www.w3.org/2000/svg"
                 >
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-center">
-                    {/* Left Frame Visual Showcase (5 Cols) */}
-                    <div className="lg:col-span-5 flex flex-col items-center justify-center p-4 bg-surface-container-low rounded-xl border border-surface-container shadow-inner">
-                      <div className="landing-frame-stack relative group max-w-[280px] w-full flex items-center justify-center py-2">
-                        {/* Authentic SVG Frame Asset from website public library */}
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={currentFrame.assetUrl}
-                          alt={currentFrame.name}
-                          className="w-full max-h-[440px] object-contain drop-shadow-[4px_6px_12px_rgba(0,0,0,0.18)] transition-transform duration-300 group-hover:scale-[1.02]"
-                        />
-
-                        {/* Hover Overlay Hint */}
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-primary/20 backdrop-blur-[1px] rounded-lg">
-                          <span className="bg-primary text-on-primary px-3 py-1.5 rounded-full font-label-sm text-label-sm uppercase font-bold shadow-md flex items-center gap-1.5">
-                            <span className="material-symbols-outlined text-[16px]">visibility</span>
-                            Full Vector SVG
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Frame Dimension Footer */}
-                      <div className="mt-3 inline-flex items-center gap-2 text-xs font-label-sm text-on-surface-variant font-bold uppercase tracking-wider">
-                        <span className="material-symbols-outlined text-secondary text-[16px]">aspect_ratio</span>
-                        <span>{currentFrame.printSize} • {currentFrame.poses} Poses</span>
-                      </div>
-                    </div>
-
-                    {/* Right Specs & Info (7 Cols) */}
-                    <div className="lg:col-span-7 flex flex-col justify-between h-full pl-0 lg:pl-4">
-                      <div>
-                        {/* Badge Row */}
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className={`px-3 py-1 rounded-full font-label-sm text-label-sm uppercase font-extrabold shadow-xs ${currentFrame.tagBg} ${currentFrame.tagText}`}>
-                            {currentFrame.tag}
-                          </span>
-                          <span className="text-secondary font-label-sm text-label-sm uppercase tracking-wider font-bold">
-                            {currentFrame.styleVibe}
-                          </span>
-                        </div>
-
-                        {/* Title & Description */}
-                        <h3 className="font-headline-lg text-headline-lg text-primary font-serif">
-                          {currentFrame.name}
-                        </h3>
-                        <p className="font-body-md text-body-md text-on-surface-variant mt-2 leading-relaxed" style={{ textWrap: 'pretty' }}>
-                          {currentFrame.description}
-                        </p>
-
-                        {/* Feature Badges Grid */}
-                        <div className="mt-space-md grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                          {currentFrame.features.map((feature, idx) => (
-                            <div
-                              key={idx}
-                              className="flex items-center gap-2 bg-surface-container-low px-3 py-2 rounded-lg border border-surface-container"
-                            >
-                              <span className="material-symbols-outlined text-secondary text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                                check_circle
-                              </span>
-                              <span className="font-body-sm text-body-sm text-on-surface font-medium">
-                                {feature}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Tech Spec Highlights */}
-                        <div className="mt-space-md p-3.5 bg-secondary-container/20 rounded-xl border border-secondary-container/40 flex flex-wrap items-center justify-between gap-3 text-xs font-label-sm text-on-surface">
-                          <div className="flex items-center gap-1.5">
-                            <span className="material-symbols-outlined text-primary text-[18px]">verified</span>
-                            <span><strong>Zero Cloud Storage:</strong> Client-side render</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="material-symbols-outlined text-secondary text-[18px]">auto_awesome</span>
-                            <span><strong>Resolution:</strong> 300 DPI Ultra Clear</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="material-symbols-outlined text-tertiary text-[18px]">gif</span>
-                            <span><strong>Animated GIF:</strong> Auto-compiled</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Action Row */}
-                      <div className="mt-space-lg pt-space-sm flex flex-wrap items-center gap-3">
-                        <Link
-                          href="/solo"
-                          className="inline-flex items-center gap-2 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md uppercase px-space-lg py-3.5 rounded-lg shadow-dark transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] font-bold"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">photo_camera</span>
-                          <span>Snap With This Frame</span>
-                        </Link>
-                        <Link
-                          href="/solo"
-                          className="inline-flex items-center gap-2 bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md uppercase px-space-md py-3.5 rounded-lg border border-surface-container transition-all duration-200 font-bold"
-                        >
-                          <span>Explore All Presets</span>
-                          <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-
-              {/* 4 Cards Grid: Side-by-Side Gallery Overview */}
-              <div className="mt-space-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter max-w-5xl mx-auto">
-                {SIGNATURE_FRAMES.map((item, idx) => {
-                  const isSelected = idx === activeFrameIndex;
-                  return (
-                    <motion.button
-                      key={item.id}
-                      type="button"
-                      aria-pressed={isSelected}
-                      aria-label={`Preview ${item.name}`}
-                      variants={fadeUp}
-                      custom={idx}
-                      onClick={() => setActiveFrameIndex(idx)}
-                      className={`cursor-pointer text-left rounded-xl p-3.5 border-2 transition-all duration-200 flex flex-col justify-between ${isSelected
-                        ? 'bg-surface-container-lowest border-primary shadow-cobalt-sm scale-[1.02]'
-                        : 'bg-surface-container-lowest/80 border-surface-container hover:border-primary/40 hover:-translate-y-1 hover:shadow-sm'
-                        }`}
-                    >
-                      {/* Mini Thumbnail */}
-                      <div className="w-full h-44 bg-surface-container-low rounded-lg p-2 flex items-center justify-center overflow-hidden mb-3 border border-surface-container">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={item.assetUrl}
-                          alt={item.name}
-                          className="h-full object-contain drop-shadow-sm transition-transform duration-300 group-hover:scale-105"
-                        />
-                      </div>
-
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] uppercase font-bold tracking-widest text-secondary">
-                            {item.poses} Poses
-                          </span>
-                          <span className={`text-[9px] uppercase font-bold px-2 py-0.5 rounded-full ${item.tagBg} ${item.tagText}`}>
-                            {item.tag}
-                          </span>
-                        </div>
-                        <h4 className="font-headline-md text-[15px] text-primary font-bold line-clamp-1">
-                          {item.name}
-                        </h4>
-                        <p className="font-body-sm text-[12px] text-on-surface-variant mt-1 line-clamp-2">
-                          {item.layout}
-                        </p>
-                      </div>
-
-                      <div className="mt-3 pt-2 border-t border-surface-container flex items-center justify-between text-xs font-label-sm">
-                        <span className="text-primary font-bold">
-                          {isSelected ? 'Active Preview' : 'Click to Inspect'}
-                        </span>
-                        <span className="material-symbols-outlined text-[16px] text-primary">
-                          {isSelected ? 'check_circle' : 'touch_app'}
-                        </span>
-                      </div>
-                    </motion.button>
-                  );
-                })}
+                  <path d="M0,205L48,170C96,130,192,54,288,52C384,54,480,130,576,140C672,150,768,92,864,82C960,72,1056,110,1152,148C1248,185,1344,224,1392,242L1440,260L1440,320L0,320Z" />
+                </svg>
               </div>
-            </div>
-          </AnimatedSection>
+            </AnimatedSection>
+          </div>
+        </main>
 
-          {/* ========================================================================
-              FINAL CTA BANNER: Connected with seamless wave transitions
-              ======================================================================== */}
-          <AnimatedSection className="relative w-full bg-tertiary-fixed text-on-tertiary-fixed py-24 sm:py-28 md:py-36 overflow-hidden">
-            {/* Top Organic Wave Divider: Transitioning from cream linen into sweet pink */}
-            <div className="w-full overflow-hidden leading-none absolute -top-1 left-0 right-0 select-none pointer-events-none z-20">
-              <svg
-                className="w-full h-16 sm:h-20 md:h-28 lg:h-32 block fill-background"
-                preserveAspectRatio="none"
-                viewBox="0 0 1440 320"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M0,260L48,242C96,224,192,185,288,148C384,110,480,72,576,82C672,92,768,150,864,140C960,130,1056,54,1152,52C1248,54,1344,130,1392,170L1440,205L1440,0L0,0Z" />
-              </svg>
-            </div>
-
-            {/* Ambient gradients */}
-            <div
-              className="absolute right-0 top-0 w-[400px] h-[400px] opacity-20 pointer-events-none"
-              style={{
-                background: 'radial-gradient(circle, rgba(254,174,222,0.5) 0%, transparent 60%)',
-              }}
-            />
-            <div
-              className="absolute left-0 bottom-0 w-[300px] h-[300px] opacity-15 pointer-events-none"
-              style={{
-                background: 'radial-gradient(circle, rgba(84,27,68,0.15) 0%, transparent 60%)',
-              }}
-            />
-
-            <div className="max-w-7xl mx-auto px-margin flex flex-col items-center text-center relative z-10">
-              <motion.span
-                variants={fadeUp}
-                custom={0}
-                className="font-label-md text-label-md text-tertiary tracking-widest font-bold mb-2 inline-block uppercase"
-              >
-                Get your best smile ready
-              </motion.span>
-              <motion.h2
-                variants={fadeUp}
-                custom={1}
-                className="font-headline-lg text-headline-lg md:text-[46px] md:leading-[54px] text-tertiary tracking-tight font-serif"
-                style={{ textWrap: 'balance', letterSpacing: '-0.02em' }}
-              >
-                Let&apos;s create some magic.
-              </motion.h2>
-              <motion.p
-                variants={fadeUp}
-                custom={2}
-                className="font-body-md text-body-md text-on-tertiary-fixed-variant max-w-md mt-space-xs mb-space-lg"
-                style={{ textWrap: 'pretty' }}
-              >
-                Turn on your camera, pick your signature frame, and capture memorable keepsake strips right now.
-              </motion.p>
-              <motion.div variants={fadeUp} custom={3} className="flex flex-wrap gap-3 justify-center">
-                <Link
-                  className="inline-flex items-center gap-2 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md uppercase px-space-lg py-4 rounded-lg shadow-sm hover:shadow-lg hover:shadow-primary/20 transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] font-bold"
-                  href="/solo"
-                >
-                  <span className="material-symbols-outlined text-[20px]">play_arrow</span>
-                  <span>Start Photobooth Now</span>
-                </Link>
-              </motion.div>
-            </div>
-
-            {/* Bottom Organic Wave Divider: Transitioning smoothly from sweet pink into Footer background */}
-            <div className="w-full overflow-hidden leading-none absolute -bottom-1 left-0 right-0 select-none pointer-events-none z-20">
-              <svg
-                className="w-full h-16 sm:h-20 md:h-28 lg:h-32 block fill-surface-container-low"
-                preserveAspectRatio="none"
-                viewBox="0 0 1440 320"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M0,205L48,170C96,130,192,54,288,52C384,54,480,130,576,140C672,150,768,92,864,82C960,72,1056,110,1152,148C1248,185,1344,224,1392,242L1440,260L1440,320L0,320Z" />
-              </svg>
-            </div>
-          </AnimatedSection>
-        </div>
-      </main>
-
-      {/* Shared Footer Component (hideWave=true since section above smoothly waves into Footer) */}
-      <Footer hideWave />
-    </div>
+        {/* Shared Footer Component (hideWave=true since section above smoothly waves into Footer) */}
+        <Footer hideWave />
+      </div>
     </MotionConfig>
   );
 }
