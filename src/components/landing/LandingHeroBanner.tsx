@@ -44,36 +44,6 @@ export function LandingHeroBanner({
           >
             A vintage-inspired digital photobooth right in your browser. Choose signature frames, snap spontaneous poses, apply 90s digicam filters, and print retro keepsake strips.
           </motion.p>
-          <motion.div variants={fadeUp} custom={3} className="mt-space-lg flex flex-wrap gap-3 justify-center lg:justify-start">
-            <button
-              type="button"
-              onClick={() => scrollToSection('modes')}
-              className="inline-flex items-center gap-2 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md uppercase px-space-lg py-3.5 rounded-xl shadow-sm transition-all duration-200 active:scale-[0.98] font-bold cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px]">play_arrow</span>
-              <span>Start Snapping</span>
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface font-label-md text-label-md px-space-lg py-3.5 rounded-xl border border-outline-variant/30 transition-all duration-200 hover:bg-surface-container-lowest hover:shadow-xs active:scale-[0.98] font-bold cursor-pointer"
-              onClick={() => scrollToSection('duo-card')}
-              onMouseEnter={() => setDuoPreview(true)}
-              onMouseLeave={() => setDuoPreview(false)}
-              onFocus={() => setDuoPreview(true)}
-              onBlur={() => setDuoPreview(false)}
-            >
-              <span className="material-symbols-outlined text-[18px]">group_add</span>
-              <span>Create Duo Room</span>
-            </button>
-            <button
-              type="button"
-              className="inline-flex w-full items-center justify-center lg:justify-start gap-2 py-2 text-secondary text-sm font-bold underline decoration-secondary/40 underline-offset-4 transition-colors hover:text-primary cursor-pointer"
-              onClick={() => scrollToSection('frames')}
-            >
-              <span className="material-symbols-outlined text-[18px]">palette</span>
-              <span>View Frames</span>
-            </button>
-          </motion.div>
         </div>
         <PhotoboothHero duoPreview={duoPreview} />
       </div>

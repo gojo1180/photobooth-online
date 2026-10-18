@@ -32,33 +32,7 @@ export function CaptureModesSection({
       <AnimatedSection id="modes" className="relative w-full bg-background pt-space-md pb-space-sm scroll-mt-20" delay={0.1}>
         <div className="max-w-7xl mx-auto px-margin flex flex-col items-center justify-center">
           {/* Curved Circular Stamp Badge */}
-          <motion.div variants={scaleIn} className="relative w-44 h-44 flex items-center justify-center -mt-10 select-none">
-            <svg
-              className="w-full h-full animate-[spin_24s_linear_infinite]"
-              viewBox="0 0 200 200"
-            >
-              <defs>
-                <path
-                  d="M 100, 100 m -70, 0 a 70,70 0 1,1 140,0 a 70,70 0 1,1 -140,0"
-                  fill="none"
-                  id="circleTextPath"
-                />
-              </defs>
-              <text className="font-label-md text-[13px] fill-secondary font-bold uppercase tracking-[0.24em]">
-                <textPath href="#circleTextPath" startOffset="0%">
-                  Snapbooth Studio • Pure Joy In Every Shot •
-                </textPath>
-              </text>
-            </svg>
-            {/* Center Cobalt Starburst */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-18 h-18 rounded-full bg-primary flex items-center justify-center shadow-xs" style={{ width: '72px', height: '72px' }}>
-                <svg className="w-9 h-9 fill-surface-bright" viewBox="0 0 24 24">
-                  <path d="M12 0L14.2 8.5L22.6 6.1L17.2 13L23.8 17.5L15.3 18.2L16.2 24L10.7 19.3L6 24L7.5 17.8L0 18.2L5.8 13.5L0.2 7.1L8.5 8.7L9.5 0.5L12 0Z" />
-                </svg>
-              </div>
-            </div>
-          </motion.div>
+
           <motion.div variants={fadeUp} custom={0} className="mt-space-xs text-center">
             <span className="font-label-sm text-label-sm uppercase tracking-widest text-primary font-bold">
               Studio Capture Modes

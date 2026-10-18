@@ -11,7 +11,7 @@ export function FinalCtaBanner() {
       {/* Top Organic Wave Divider: Transitioning from cream linen into sweet pink */}
       <div className="w-full overflow-hidden leading-none absolute -top-1 left-0 right-0 select-none pointer-events-none z-20">
         <svg
-          className="w-full h-16 sm:h-20 md:h-28 lg:h-32 block fill-background"
+          className="w-full h-16 sm:h-20 md:h-28 lg:h-32 block fill-[#001C97]"
           preserveAspectRatio="none"
           viewBox="0 0 1440 320"
           xmlns="http://www.w3.org/2000/svg"

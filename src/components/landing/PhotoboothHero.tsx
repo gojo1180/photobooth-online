@@ -109,7 +109,6 @@ export function PhotoboothHero({ duoPreview = false }: { duoPreview?: boolean })
         onLostPointerCapture={endDrag}
         onPointerLeave={() => { pointer.current.x = 0; pointer.current.y = 0; }}
       >
-        <div className={styles.halo} aria-hidden="true" />
         <span className={styles.edition}>THE EVERYDAY MEMORY MAKER</span>
 
         {mounted && !failed && (
