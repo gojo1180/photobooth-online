@@ -54,10 +54,13 @@ export async function updateSession(request: NextRequest) {
 
   // Protect /admin/* (except /admin/login)
   if (path.startsWith('/admin') && path !== '/admin/login') {
-    // If Supabase cookie has user and app_metadata explicitly shows user role (not admin), redirect
-    if (user && user.app_metadata?.role !== 'admin' && user.user_metadata?.role !== 'admin') {
-      // Note: Client-side AdminLayout also checks DB table public.admin_users
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/admin/login';
+      url.searchParams.set('redirect', path);
+      return NextResponse.redirect(url);
     }
+    // If user is logged in, AdminLayout client component will also verify against admin_users table
   }
 
   return response;

@@ -1,6 +1,4 @@
 .root { position: relative; width: 100%; max-width: 610px; min-width: 0; margin: auto; }
-.experience { position: absolute; inset: 0; visibility: hidden; }
-.experience[data-ready='true'] { position: relative; visibility: visible; }
 .stage { position: relative; height: 490px; touch-action: pan-y; cursor: grab; user-select: none; }
 .stage:active { cursor: grabbing; }
 .stage canvas { position: relative; z-index: 1; touch-action: pan-y; }

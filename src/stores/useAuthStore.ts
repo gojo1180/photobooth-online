@@ -39,54 +39,53 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAdmin: false,
 
   initAuth: async () => {
-    // 1. Immediately read from localStorage if running in browser
-    if (typeof window !== 'undefined') {
-      const savedToken = localStorage.getItem('photobooth_auth_token');
-      const savedUserStr = localStorage.getItem('photobooth_user');
+    // 1. Guard against non-browser environments
+    if (typeof window === 'undefined') return;
 
-      if (savedToken && savedUserStr) {
-        try {
-          const parsedUser: UserSessionData = JSON.parse(savedUserStr);
-          if (parsedUser && parsedUser.id) {
-            const isAdminRole = parsedUser.role === 'admin';
-            set({
-              user: parsedUser,
-              token: savedToken,
-              isLoading: false,
-              isAuthenticated: true,
-              isAdmin: isAdminRole,
-            });
+    const savedToken = localStorage.getItem('photobooth_auth_token');
+    const savedUserStr = localStorage.getItem('photobooth_user');
 
-            // Refresh profile from backend /auth/me in background
-            apiGetMe(savedToken)
-              .then((profile) => {
-                if (profile && profile.id) {
-                  const verifiedRole = profile.role || parsedUser.role || 'user';
-                  const verifiedUser: UserSessionData = {
-                    ...parsedUser,
-                    display_name: profile.display_name || parsedUser.display_name,
-                    avatar_url: profile.avatar_url || parsedUser.avatar_url,
-                    role: verifiedRole,
-                  };
-                  set({
-                    user: verifiedUser,
-                    isAdmin: verifiedRole === 'admin',
-                  });
-                  localStorage.setItem('photobooth_user', JSON.stringify(verifiedUser));
-                }
-              })
-              .catch(() => {
-                // If backend check fails (e.g. offline), keep existing parsed session
+    if (savedToken && savedUserStr) {
+      try {
+        const parsedUser: UserSessionData = JSON.parse(savedUserStr);
+        if (parsedUser?.id) {
+          const isAdminRole = parsedUser.role === 'admin';
+          set({
+            user: parsedUser,
+            token: savedToken,
+            isLoading: false,
+            isAuthenticated: true,
+            isAdmin: isAdminRole,
+          });
+
+          // Refresh profile from backend /auth/me in background
+          apiGetMe(savedToken)
+            .then((profile) => {
+              if (!profile?.id) return;
+              const verifiedRole = profile.role || parsedUser.role || 'user';
+              const verifiedUser: UserSessionData = {
+                ...parsedUser,
+                display_name: profile.display_name || parsedUser.display_name,
+                avatar_url: profile.avatar_url || parsedUser.avatar_url,
+                role: verifiedRole,
+              };
+              set({
+                user: verifiedUser,
+                isAdmin: verifiedRole === 'admin',
               });
-          }
-        } catch {
-          localStorage.removeItem('photobooth_user');
+              localStorage.setItem('photobooth_user', JSON.stringify(verifiedUser));
+            })
+            .catch(() => {
+              // If backend check fails (e.g. offline), keep existing parsed session
+            });
         }
+      } catch {
+        localStorage.removeItem('photobooth_user');
       }
     }
 
     // 2. Set up Supabase auth listener once
-    if (!listenerAttached && typeof window !== 'undefined') {
+    if (!listenerAttached) {
       listenerAttached = true;
       const supabase = createClient();
 

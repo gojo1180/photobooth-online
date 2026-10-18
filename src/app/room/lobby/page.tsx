@@ -7,6 +7,7 @@ import { Footer } from '@/components/common/Footer';
 import { useRoomStore } from '@/stores/useRoomStore';
 import { useAuth } from '@/hooks/useAuth';
 import { createRoom, getRoom } from '@/lib/api';
+import { formatRoomCodeDisplay, normalizeRoomCode } from '@/lib/room-utils';
 import { Users, Plus, ArrowRight, KeyRound, Loader2 } from 'lucide-react';
 
 export default function RoomLobbyPage() {
@@ -54,12 +55,13 @@ export default function RoomLobbyPage() {
       return;
     }
 
-    const rawClean = inputCode.trim().toUpperCase();
-    if (rawClean.length < 3) {
+    const trimmed = inputCode.trim();
+    if (trimmed.length < 3) {
       setError('Please enter a valid room code.');
       return;
     }
-    const cleanCode = rawClean.startsWith('PB-') ? rawClean : `PB-${rawClean}`;
+    const cleanCode = formatRoomCodeDisplay(trimmed);
+    const roomId = normalizeRoomCode(trimmed);
 
     setIsLoading(true);
     setError(null);
