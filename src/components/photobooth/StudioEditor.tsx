@@ -172,7 +172,7 @@ export function StudioEditor() {
             <span className="material-symbols-outlined text-[28px]">format_quote</span>
           </div>
           <blockquote className="font-body-lg text-body-lg italic text-primary leading-relaxed font-serif">
-            &ldquo;Scribblepie transformed our spontaneous laughs into an editorial keepsake that feels warm and timeless. Every detail is full of personality.&rdquo;
+            &ldquo;NevStudio transformed our spontaneous laughs into an editorial keepsake that feels warm and timeless. Every detail is full of personality.&rdquo;
           </blockquote>
           <p className="font-label-md text-label-md uppercase tracking-wider text-secondary mt-space-sm font-bold">
             NADIA &amp; RENO • STUDIO ARCHIVE VOL. 14

@@ -3,7 +3,7 @@
 export function CaptureHeaderHero() {
   return (
     <>
-      {/* TOP MUSTARD GOLD HERO / HEADER ZONE (Scribblepie Style) */}
+      {/* TOP MUSTARD GOLD HERO / HEADER ZONE (NevStudio Style) */}
       <section className="w-full bg-secondary-container text-on-secondary-fixed pt-10 pb-16 px-margin relative overflow-hidden">
         {/* Subtle graphic background ornament: radiating vintage rings */}
         <div

@@ -42,25 +42,18 @@ export function Navbar() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-surface/90 backdrop-blur-md shadow-[0_1px_8px_rgba(0,0,0,0.04)] transition-shadow duration-300">
       <div className="h-16 md:h-20 max-w-7xl mx-auto px-4 sm:px-6 md:px-8 flex items-center justify-between gap-2">
         {/* Brand logo */}
-        <Link href="/" onClick={() => setIsMenuOpen(false)} className="flex min-w-0 items-center gap-2 transition-opacity duration-200 hover:opacity-80">
-          {/* Inline SVG brand mark: no external image dependency */}
-          <div className="w-9 h-9 shrink-0 rounded-lg bg-primary flex items-center justify-center shadow-cobalt-sm">
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="2" y="6" width="20" height="14" rx="3" fill="white" fillOpacity="0.9" />
-              <circle cx="12" cy="13" r="4" fill="#001c97" fillOpacity="0.8" />
-              <circle cx="12" cy="13" r="2" fill="white" fillOpacity="0.6" />
-              <rect x="8" y="3" width="8" height="4" rx="1.5" fill="white" fillOpacity="0.7" />
-              <circle cx="18" cy="9" r="1" fill="#fea12b" />
-            </svg>
-          </div>
-          <div className="flex min-w-0 flex-col">
-            <span className="truncate font-headline-md text-[17px] sm:text-[20px] text-primary leading-tight tracking-tight uppercase">
-              Scribblepie
-            </span>
-            <span className="hidden min-[360px]:block truncate font-label-sm text-[9px] sm:text-label-sm text-secondary tracking-widest uppercase">
-              Snapbooth Studio
-            </span>
-          </div>
+        <Link
+          href="/"
+          onClick={() => setIsMenuOpen(false)}
+          className="flex min-w-0 items-center gap-2.5 transition-opacity duration-200 hover:opacity-85 select-none"
+          aria-label="NevStudio Home"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/nevstudio-logo-transparent.png"
+            alt="NevStudio"
+            className="h-7 sm:h-8 md:h-9 w-auto object-contain max-w-[190px]"
+          />
         </Link>
 
         {/* Navigation Pills */}

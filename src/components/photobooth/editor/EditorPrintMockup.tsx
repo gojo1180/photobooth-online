@@ -110,7 +110,7 @@ export function EditorPrintMockup({
             id="card-caption-display"
             className="font-headline-md text-headline-md tracking-tight font-serif"
           >
-            {cardCaption || 'Scribblepie Studio'}
+            {cardCaption || 'NevStudio Studio'}
           </p>
           <p className="font-label-sm text-[10px] uppercase tracking-widest opacity-80 font-bold">
             Snapbooth Keepsake Archive

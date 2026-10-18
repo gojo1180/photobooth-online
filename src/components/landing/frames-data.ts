@@ -67,7 +67,7 @@ export const SIGNATURE_FRAMES: FrameShowcaseItem[] = [
     tagBg: 'bg-[#BEE3F8]',
     tagText: 'text-[#1230c7]',
     description:
-      'Full-sheet 6-pose collage with cobalt blue borders, pastel star and heart emblems, and verified Scribblepie studio imprint. Maximize your laughs and candid reactions in a single keepsake sheet.',
+      'Full-sheet 6-pose collage with cobalt blue borders, pastel star and heart emblems, and verified NevStudio imprint. Maximize your laughs and candid reactions in a single keepsake sheet.',
     assetUrl: '/frames/y2k_collage_lavender.svg',
     poses: 6,
     printSize: 'Full Keepsake Collage',

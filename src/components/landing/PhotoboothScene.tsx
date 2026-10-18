@@ -48,7 +48,7 @@ export function PhotoboothScene() {
               <div className={styles.cameraSide} aria-hidden="true" />
               <div className={styles.cameraTop} aria-hidden="true" />
               <div className={styles.cameraFront}>
-                <div className={styles.brand} aria-hidden="true"><span>scribblepie</span><small>SNAPBOOTH / 01</small></div>
+                <div className={styles.brand} aria-hidden="true"><span>nevstudio</span><small>STUDIO / 01</small></div>
                 <div className={styles.viewfinder} aria-hidden="true"><i /></div>
                 <div className={styles.flash} aria-hidden="true" />
                 <div className={styles.cameraBand} aria-hidden="true" />
@@ -76,7 +76,7 @@ export function PhotoboothScene() {
                 <small>0{pose + 1}</small>
               </div>
             ))}
-            <span className={styles.stripFooter}>scribblepie <span>♡</span></span>
+            <span className={styles.stripFooter}>nevstudio <span>♡</span></span>
           </div>
           <div className={styles.postcard} aria-hidden="true"><span>made for<br /><em>memories.</em></span><Sparkles size={28} /></div>
           <span className={styles.sparkle} aria-hidden="true">✦</span>

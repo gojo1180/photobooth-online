@@ -74,7 +74,7 @@ export function getSideBySidePartitions(slot: FrameSlot) {
 }
 
 /**
- * Color Filter Presets for Scribblepie Studio aesthetic
+ * Color Filter Presets for NevStudio aesthetic
  */
 export const PHOTO_FILTERS: Record<
   string,

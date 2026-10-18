@@ -21,7 +21,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Scribblepie Snapbooth Studio",
+  title: "NevStudio • Retro Photobooth Studio",
   description:
     "Artisanal Digital Photobooth. Express yourself with vintage retro aesthetics, custom scrapbook frames, instant keepsake strips, and real-time collaborative duo rooms.",
 };

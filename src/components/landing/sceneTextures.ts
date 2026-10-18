@@ -12,9 +12,9 @@ export function makeSceneTexture(kind: 'brand' | 'postcard' | 'strip', variant =
   if (kind === 'brand') {
     ctx.fillStyle = '#001c97';
     ctx.font = 'italic bold 80px Georgia';
-    ctx.fillText('scribblepie', 8, 88);
+    ctx.fillText('nevstudio', 8, 88);
     ctx.font = '22px monospace';
-    ctx.fillText('SNAPBOOTH / 01', 14, 136);
+    ctx.fillText('STUDIO / 01', 14, 136);
   } else if (kind === 'postcard') {
     ctx.fillStyle = '#ffd8ec';
     ctx.fillRect(0, 0, 512, 192);
@@ -61,7 +61,7 @@ export function makeSceneTexture(kind: 'brand' | 'postcard' | 'strip', variant =
       ctx.font = '12px monospace'; ctx.fillText(`0${i + 1}`, 222, y + 147);
     }
     ctx.fillStyle = '#541b44'; ctx.font = 'italic bold 30px Georgia';
-    ctx.fillText('scribblepie', 128, 610);
+    ctx.fillText('nevstudio', 128, 610);
   }
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace;

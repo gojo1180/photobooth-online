@@ -27,11 +27,13 @@ export function Footer({ hideWave = false }: FooterProps = {}) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-gutter mb-space-xl">
           {/* Col 1: Brand Info */}
           <div className="flex flex-col gap-space-sm md:col-span-1">
-            <div className="flex items-center gap-space-xs">
-              <span className="font-headline-md text-headline-md text-primary">Snapbooth</span>
-              <span className="font-label-sm text-label-sm px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-bold">
-                STUDIO V2
-              </span>
+            <div className="flex items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/nevstudio-logo-transparent.png"
+                alt="NevStudio"
+                className="h-7 w-auto object-contain"
+              />
             </div>
             <p className="font-body-sm text-body-sm text-on-surface-variant">
               Artisanal digital photobooth suite crafted for joyful events, bespoke prints, and playful keepsake strips.
@@ -83,7 +85,7 @@ export function Footer({ hideWave = false }: FooterProps = {}) {
             <ul className="flex flex-col gap-2 font-body-sm text-body-sm text-on-surface-variant">
               <li>
                 <a className="hover:text-primary transition-colors duration-200 hover:underline underline-offset-4" href="#">
-                  @SNAPBOOTHSTUDIO
+                  @NEVSTUDIO
                 </a>
               </li>
               <li>
@@ -134,7 +136,7 @@ export function Footer({ hideWave = false }: FooterProps = {}) {
 
         {/* Bottom Bar */}
         <div className="pt-space-md flex flex-col md:flex-row items-center justify-between gap-space-sm font-label-sm text-label-sm text-on-surface-variant border-t border-surface-container pb-space-md">
-          <p>© 2026 Scribblepie Design Studio. All rights reserved.</p>
+          <p>© 2026 NevStudio. All rights reserved.</p>
           <div className="flex items-center gap-space-md">
             <a className="hover:text-on-surface transition-colors duration-200 hover:underline underline-offset-4" href="#">
               Privacy Policy
