@@ -71,16 +71,25 @@ export default function AdminFramesPage() {
       }
 
       if (backendFrames && backendFrames.length > 0) {
-        const mapped: FrameWithStatus[] = backendFrames.map((bf) => ({
-          id: bf.id,
-          layout_id: bf.layout_id,
-          name: bf.name,
-          asset_url: bf.asset_url,
-          slots: bf.slots,
-          canvasWidth: DEFAULT_FRAMES[bf.layout_id]?.[0]?.canvasWidth || 800,
-          canvasHeight: DEFAULT_FRAMES[bf.layout_id]?.[0]?.canvasHeight || 960,
-          is_active: bf.is_active,
-        }));
+        const mapped: FrameWithStatus[] = backendFrames.map((bf) => {
+          const matchedLayout = fetchedLayouts.find((l) => l.id === bf.layout_id);
+          return {
+            id: bf.id,
+            layout_id: bf.layout_id,
+            name: bf.name,
+            asset_url: bf.asset_url,
+            slots: bf.slots,
+            canvasWidth:
+              matchedLayout?.canvas_width ||
+              DEFAULT_FRAMES[bf.layout_id]?.[0]?.canvasWidth ||
+              600,
+            canvasHeight:
+              matchedLayout?.canvas_height ||
+              DEFAULT_FRAMES[bf.layout_id]?.[0]?.canvasHeight ||
+              1800,
+            is_active: bf.is_active,
+          };
+        });
         setFrames(mapped);
       }
     } catch (err) {

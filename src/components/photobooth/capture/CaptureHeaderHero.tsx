@@ -26,18 +26,6 @@ export function CaptureHeaderHero() {
         </div>
 
         <div className="max-w-6xl mx-auto flex flex-col items-center text-center relative z-10">
-          {/* Status pill badges */}
-          <div className="flex flex-wrap items-center justify-center gap-space-xs mb-space-sm">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-lowest text-primary shadow-xs border border-outline-variant/30 font-label-sm text-label-sm uppercase font-bold">
-              <span className="w-2 h-2 rounded-full bg-error animate-pulse" />
-              STUDIO BOOTH #PB-204
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary text-on-primary shadow-xs font-label-sm text-label-sm uppercase font-bold">
-              <span className="material-symbols-outlined text-[15px]">verified</span>
-              HD CAMERA ARMED &amp; READY
-            </span>
-          </div>
-
           {/* Main Playful Title */}
           <h1 className="font-headline-lg text-headline-lg md:text-display-lg text-primary tracking-tight uppercase max-w-3xl mb-space-xs font-serif">
             SMILE FOR THE CAMERA!

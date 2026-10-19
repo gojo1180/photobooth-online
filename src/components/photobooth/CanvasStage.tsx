@@ -115,36 +115,49 @@ export const CanvasStage = forwardRef<CanvasStageRef, CanvasStageProps>(
       ]).then(([loadedFrame, ...loadedPhotos]) => {
         if (isCancelled) return;
 
-        // Auto-heal / normalize slot coordinates if saved against different resolution
+        // Dynamically match canvas dimensions to the uploaded frame's natural resolution & aspect ratio
+        const width =
+          loadedFrame && loadedFrame.naturalWidth > 0
+            ? loadedFrame.naturalWidth
+            : (frame.canvasWidth || 600);
+        const height =
+          loadedFrame && loadedFrame.naturalHeight > 0
+            ? loadedFrame.naturalHeight
+            : (frame.canvasHeight || 900);
+
+        if (canvas.width !== width || canvas.height !== height) {
+          canvas.width = width;
+          canvas.height = height;
+        }
+
+        // Draw physical matte print background matching the frame's exact dimensions
+        ctx.fillStyle = theme.background;
+        ctx.fillRect(0, 0, width, height);
+
+        // Normalize slot coordinates to active canvas resolution
         let effectiveSlots = frame.slots;
         if (loadedFrame && loadedFrame.naturalWidth > 0 && loadedFrame.naturalHeight > 0) {
           const maxSlotX = Math.max(...frame.slots.map((s) => s.x + s.width), 0);
           const maxSlotY = Math.max(...frame.slots.map((s) => s.y + s.height), 0);
 
-          if (maxSlotX > width || maxSlotY > height) {
-            // Slots were saved in natural image resolution (e.g. 1200x1800) -> scale to canvas
-            const sx = width / loadedFrame.naturalWidth;
-            const sy = height / loadedFrame.naturalHeight;
-            effectiveSlots = frame.slots.map((s) => ({
-              ...s,
-              x: Math.round(s.x * sx),
-              y: Math.round(s.y * sy),
-              width: Math.round(s.width * sx),
-              height: Math.round(s.height * sy),
-            }));
-          } else if (
-            maxSlotX > 0 &&
-            maxSlotY > 0 &&
-            maxSlotX < width * 0.65 &&
-            maxSlotY < height * 0.65 &&
-            maxSlotX <= 400 &&
-            maxSlotY <= 600
-          ) {
-            // Slots were saved in unscaled admin preview coordinates (~387x580)
-            const previewH = 580;
-            const previewW = (loadedFrame.naturalWidth / loadedFrame.naturalHeight) * previewH;
-            const sx = width / previewW;
-            const sy = height / previewH;
+          // If slots were authored in a different coordinate space (e.g. legacy fixed canvas),
+          // determine authoring width/height and scale smoothly to the current frame dimensions:
+          const authoringW =
+            frame.canvasWidth && frame.canvasWidth !== width && maxSlotX <= frame.canvasWidth
+              ? frame.canvasWidth
+              : maxSlotX > width
+              ? maxSlotX
+              : width;
+          const authoringH =
+            frame.canvasHeight && frame.canvasHeight !== height && maxSlotY <= frame.canvasHeight
+              ? frame.canvasHeight
+              : maxSlotY > height
+              ? maxSlotY
+              : height;
+
+          if (authoringW !== width || authoringH !== height) {
+            const sx = width / authoringW;
+            const sy = height / authoringH;
             effectiveSlots = frame.slots.map((s) => ({
               ...s,
               x: Math.round(s.x * sx),
@@ -159,17 +172,23 @@ export const CanvasStage = forwardRef<CanvasStageRef, CanvasStageProps>(
         const filterConfig = PHOTO_FILTERS[filterKey] || PHOTO_FILTERS.normal;
         ctx.filter = filterConfig.cssFilter;
 
-        // Draw each photo into its corresponding slot with cover crop
+        // Draw each photo into its corresponding slot with cover crop & 2px bleed under frame border
+        const BLEED_PX = 2;
         loadedPhotos.forEach((item, idx) => {
           if (!item) return;
           const { img } = item;
           const slot = effectiveSlots[idx] || item.slot;
 
+          const bleedX = Math.max(0, slot.x - BLEED_PX);
+          const bleedY = Math.max(0, slot.y - BLEED_PX);
+          const bleedW = Math.min(width - bleedX, slot.width + BLEED_PX * 2);
+          const bleedH = Math.min(height - bleedY, slot.height + BLEED_PX * 2);
+
           const crop = calculateCoverCrop(
             img.naturalWidth || img.width,
             img.naturalHeight || img.height,
-            slot.width,
-            slot.height
+            bleedW,
+            bleedH
           );
 
           ctx.drawImage(
@@ -178,82 +197,61 @@ export const CanvasStage = forwardRef<CanvasStageRef, CanvasStageProps>(
             crop.sy,
             crop.sWidth,
             crop.sHeight,
-            slot.x,
-            slot.y,
-            slot.width,
-            slot.height
+            bleedX,
+            bleedY,
+            bleedW,
+            bleedH
           );
         });
 
         // Reset filter before drawing frame overlay
         ctx.filter = 'none';
 
-        // Draw frame overlay PNG/SVG on top with slot punch-out (destination-out mask)
-        // This guarantees that any opaque white/cream boxes in user-uploaded templates
-        // are punched out so the photos underneath shine through!
+        // Draw frame overlay PNG/SVG directly on top of photos
+        // Transparent punched green-screen holes allow photos to show through,
+        // while stickers, decorative elements, and borders overlay naturally!
         if (loadedFrame) {
-          const frameCanvas = document.createElement('canvas');
-          frameCanvas.width = width;
-          frameCanvas.height = height;
-          const fCtx = frameCanvas.getContext('2d');
-          if (fCtx) {
-            fCtx.drawImage(loadedFrame, 0, 0, width, height);
-
-            // Punch out slot rectangles from the frame overlay
-            fCtx.globalCompositeOperation = 'destination-out';
-            effectiveSlots.forEach((slot) => {
-              fCtx.fillRect(slot.x, slot.y, slot.width, slot.height);
-            });
-            fCtx.globalCompositeOperation = 'source-over';
-
-            // Composite punched frame overlay on top of the rendered photos
-            ctx.drawImage(frameCanvas, 0, 0, width, height);
-          } else {
-            ctx.drawImage(loadedFrame, 0, 0, width, height);
-          }
+          ctx.drawImage(loadedFrame, 0, 0, width, height);
         }
 
-        // Render the personalized print footer into the same canvas used for export.
-        const maxSlotBottom = Math.max(...effectiveSlots.map((slot) => slot.y + slot.height), 0);
-        const footerTop = Math.min(height - 72, maxSlotBottom + Math.max(10, height * 0.012));
-        const footerHeight = height - footerTop;
+        // Optional personalized print footer (rendered only if custom caption or date stamp is active)
+        const hasCustomCaption = Boolean(cardCaption && cardCaption.trim().length > 0);
+        if (hasCustomCaption || (showDateStamp && dateStampText)) {
+          const maxSlotBottom = Math.max(...effectiveSlots.map((slot) => slot.y + slot.height), 0);
+          const footerTop = Math.min(height - 72, maxSlotBottom + Math.max(10, height * 0.012));
+          const footerHeight = height - footerTop;
 
-        if (footerHeight >= 48 && (cardCaption.trim() || showDateStamp)) {
-          ctx.save();
-          ctx.globalAlpha = 0.94;
-          ctx.fillStyle = theme.background;
-          ctx.fillRect(0, footerTop, width, footerHeight);
-          ctx.restore();
+          if (footerHeight >= 40) {
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
 
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
+            if (hasCustomCaption) {
+              ctx.fillStyle = theme.foreground;
+              fitCanvasText(
+                ctx,
+                cardCaption.trim(),
+                width * 0.86,
+                Math.max(18, Math.min(34, width * 0.042)),
+                'Vollkorn, Georgia, serif'
+              );
+              ctx.fillText(
+                cardCaption.trim(),
+                width / 2,
+                footerTop + footerHeight * (showDateStamp ? 0.38 : 0.53)
+              );
+            }
 
-          if (cardCaption.trim()) {
-            ctx.fillStyle = theme.foreground;
-            fitCanvasText(
-              ctx,
-              cardCaption.trim(),
-              width * 0.86,
-              Math.max(18, Math.min(34, width * 0.042)),
-              'Vollkorn, Georgia, serif'
-            );
-            ctx.fillText(
-              cardCaption.trim(),
-              width / 2,
-              footerTop + footerHeight * (showDateStamp ? 0.38 : 0.53)
-            );
-          }
-
-          if (showDateStamp && dateStampText) {
-            ctx.fillStyle = theme.accent;
-            fitCanvasText(
-              ctx,
-              dateStampText.toUpperCase(),
-              width * 0.78,
-              Math.max(11, Math.min(16, width * 0.022)),
-              '"Plus Jakarta Sans", Arial, sans-serif'
-            );
-            ctx.fillText(dateStampText.toUpperCase(), width / 2, footerTop + footerHeight * 0.72);
+            if (showDateStamp && dateStampText) {
+              ctx.fillStyle = theme.accent;
+              fitCanvasText(
+                ctx,
+                dateStampText.toUpperCase(),
+                width * 0.78,
+                Math.max(11, Math.min(16, width * 0.022)),
+                '"Plus Jakarta Sans", Arial, sans-serif'
+              );
+              ctx.fillText(dateStampText.toUpperCase(), width / 2, footerTop + footerHeight * 0.72);
+            }
           }
         }
 

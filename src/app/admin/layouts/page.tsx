@@ -18,7 +18,7 @@ import {
   LayoutGrid,
 } from 'lucide-react';
 
-import { type LayoutItem, FALLBACK_LAYOUTS } from './types';
+import { type LayoutItem, FALLBACK_LAYOUTS, getLayoutDimensionsByPoseCount } from './types';
 import { LayoutCard } from './components/LayoutCard';
 import { CreateLayoutModal, type CreateLayoutParams } from './components/CreateLayoutModal';
 import { EditLayoutModal } from './components/EditLayoutModal';
@@ -32,13 +32,14 @@ export default function AdminLayoutsPage() {
 
   // Modal State: Create
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const initialDim = getLayoutDimensionsByPoseCount(3);
   const [createForm, setCreateForm] = useState<CreateLayoutParams>({
-    id: '',
-    name: '',
+    id: initialDim.default_id,
+    name: initialDim.default_name,
     photo_count: 3,
-    canvas_width: 480,
-    canvas_height: 1400,
-    aspect_ratio: '1:3',
+    canvas_width: initialDim.canvas_width,
+    canvas_height: initialDim.canvas_height,
+    aspect_ratio: initialDim.aspect_ratio,
     is_active: true,
   });
 
@@ -89,25 +90,33 @@ export default function AdminLayoutsPage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      const dim = getLayoutDimensionsByPoseCount(createForm.photo_count);
+      const canvas_width = createForm.canvas_width || dim.canvas_width;
+      const canvas_height = createForm.canvas_height || dim.canvas_height;
+      const aspect_ratio = createForm.aspect_ratio || dim.aspect_ratio;
+      const name = createForm.name.trim() || dim.default_name;
+      const id = createForm.id.trim().toLowerCase() || dim.default_id;
+
       await createAdminLayout({
-        id: createForm.id.trim().toLowerCase(),
-        name: createForm.name.trim(),
+        id,
+        name,
         photo_count: Number(createForm.photo_count),
-        canvas_width: Number(createForm.canvas_width),
-        canvas_height: Number(createForm.canvas_height),
-        aspect_ratio: createForm.aspect_ratio.trim(),
+        canvas_width,
+        canvas_height,
+        aspect_ratio,
         is_active: Boolean(createForm.is_active),
       });
 
-      showToast('success', `Layout "${createForm.name}" created successfully!`);
+      showToast('success', `Layout "${name}" created successfully!`);
       setIsCreateModalOpen(false);
+      const resetDim = getLayoutDimensionsByPoseCount(3);
       setCreateForm({
-        id: '',
-        name: '',
+        id: resetDim.default_id,
+        name: resetDim.default_name,
         photo_count: 3,
-        canvas_width: 480,
-        canvas_height: 1400,
-        aspect_ratio: '1:3',
+        canvas_width: resetDim.canvas_width,
+        canvas_height: resetDim.canvas_height,
+        aspect_ratio: resetDim.aspect_ratio,
         is_active: true,
       });
       loadLayouts();
@@ -124,12 +133,13 @@ export default function AdminLayoutsPage() {
     if (!editingLayout) return;
     setIsSubmitting(true);
     try {
+      const dim = getLayoutDimensionsByPoseCount(editingLayout.photo_count);
       await updateAdminLayout(editingLayout.id, {
         name: editingLayout.name.trim(),
         photo_count: Number(editingLayout.photo_count),
-        canvas_width: Number(editingLayout.canvas_width),
-        canvas_height: Number(editingLayout.canvas_height),
-        aspect_ratio: editingLayout.aspect_ratio.trim(),
+        canvas_width: editingLayout.canvas_width || dim.canvas_width,
+        canvas_height: editingLayout.canvas_height || dim.canvas_height,
+        aspect_ratio: editingLayout.aspect_ratio || dim.aspect_ratio,
         is_active: Boolean(editingLayout.is_active),
       });
 

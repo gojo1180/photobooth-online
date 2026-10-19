@@ -20,25 +20,6 @@ export function LayoutHeroBanner() {
         <p className="font-body-lg text-body-lg text-on-secondary-container/90 mt-space-xs max-w-xl font-serif">
           Choose your signature layout before stepping in front of the lens. All formats are exported in archival 300 DPI quality.
         </p>
-
-        {/* Stepper Pills */}
-        <div className="flex flex-wrap items-center justify-center gap-space-xs mt-space-md">
-          <span className="bg-primary text-on-primary font-label-sm text-label-sm px-space-sm py-1 rounded-full shadow-xs font-bold uppercase">
-            1. FORMAT
-          </span>
-          <span className="hidden sm:inline material-symbols-outlined text-[16px] text-on-secondary-container/60">arrow_forward</span>
-          <span className="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm px-space-sm py-1 rounded-full uppercase font-medium">
-            2. CAPTURE
-          </span>
-          <span className="hidden sm:inline material-symbols-outlined text-[16px] text-on-secondary-container/60">arrow_forward</span>
-          <span className="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm px-space-sm py-1 rounded-full uppercase font-medium">
-            3. EDIT &amp; FRAMES
-          </span>
-          <span className="hidden sm:inline material-symbols-outlined text-[16px] text-on-secondary-container/60">arrow_forward</span>
-          <span className="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm px-space-sm py-1 rounded-full uppercase font-medium">
-            4. PRINT &amp; EXPORT
-          </span>
-        </div>
       </div>
 
       {/* Fluid Organic Wave Divider to Linen Surface */}

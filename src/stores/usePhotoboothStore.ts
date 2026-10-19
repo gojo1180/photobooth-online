@@ -69,8 +69,8 @@ export const usePhotoboothStore = create<PhotoboothStore>((set) => ({
   selectedFrame: null,
   activeFilter: 'natural',
   isCapturing: false,
-  cardCaption: 'NevStudio Keepsake',
-  showDateStamp: true,
+  cardCaption: '',
+  showDateStamp: false,
   dateStampText: createDefaultDateStamp(),
   frameThemeKey: 'cream',
 

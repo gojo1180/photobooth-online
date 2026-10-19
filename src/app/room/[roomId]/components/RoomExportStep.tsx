@@ -3,6 +3,7 @@
 import { Navbar } from '@/components/common/Navbar';
 import { Footer } from '@/components/common/Footer';
 import { CanvasStage, type CanvasStageRef } from '@/components/photobooth/CanvasStage';
+import { PolaroidEjectionStage } from '@/components/photobooth/PolaroidEjectionStage';
 import { ExportActions } from '@/components/photobooth/ExportActions';
 import type { UserRole } from '@/stores/useRoomStore';
 import type { FrameItem } from '@/stores/usePhotoboothStore';
@@ -80,14 +81,16 @@ export function RoomExportStep({
         {/* Export Workspace */}
         <section className="max-w-7xl mx-auto px-4 md:px-6 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Left: Composite Canvas Stage */}
-            <div className="print-output lg:col-span-7 flex flex-col items-center">
-              <CanvasStage
-                ref={stageRef}
-                frame={selectedFrame}
-                photos={capturedPhotos}
-                filterKey={activeFilter}
-              />
+            {/* Left: Composite Canvas Stage with Polaroid Ejection */}
+            <div className="print-output lg:col-span-7 flex flex-col items-center w-full">
+              <PolaroidEjectionStage>
+                <CanvasStage
+                  ref={stageRef}
+                  frame={selectedFrame}
+                  photos={capturedPhotos}
+                  filterKey={activeFilter}
+                />
+              </PolaroidEjectionStage>
             </div>
 
             {/* Right: Export Actions */}

@@ -7,6 +7,7 @@ import { LayoutSelector } from '@/components/photobooth/LayoutSelector';
 import { CaptureSession } from '@/components/photobooth/CaptureSession';
 import { StudioEditor } from '@/components/photobooth/StudioEditor';
 import { CanvasStage, type CanvasStageRef } from '@/components/photobooth/CanvasStage';
+import { PolaroidEjectionStage } from '@/components/photobooth/PolaroidEjectionStage';
 import { ExportActions } from '@/components/photobooth/ExportActions';
 import { usePhotoboothStore } from '@/stores/usePhotoboothStore';
 
@@ -86,12 +87,7 @@ export default function SoloPage() {
         {/* Top Hero Banner */}
         <section className="w-full bg-secondary-container text-on-secondary relative pt-8 sm:pt-12 pb-28 sm:pb-32 md:pb-36 overflow-hidden">
           <div className="max-w-7xl mx-auto px-margin relative z-20 flex flex-col items-center text-center">
-            <div className="inline-flex items-center gap-space-xs bg-surface-container-lowest px-space-md py-1 rounded-full shadow-xs border border-outline-variant/20 mb-space-sm font-bold">
-              <span className="material-symbols-outlined text-primary text-[18px]">print</span>
-              <span className="font-label-sm text-label-sm text-primary uppercase tracking-widest font-bold">
-                STEP 04 / 04 • PRINT &amp; DOWNLOAD
-              </span>
-            </div>
+
             <h1 className="font-headline-lg text-headline-lg text-on-primary leading-tight max-w-2xl uppercase font-serif">
               Your Keepsake Print is Ready
             </h1>
@@ -99,7 +95,6 @@ export default function SoloPage() {
               Download high-resolution prints, compile animated GIFs, or print directly from your browser.
             </p>
           </div>
-
           {/* Wave divider */}
           <div className="absolute -bottom-1 left-0 right-0 w-full overflow-hidden leading-none z-10 select-none pointer-events-none">
             <svg
@@ -116,14 +111,16 @@ export default function SoloPage() {
         {/* Content Workspace */}
         <section className="max-w-7xl mx-auto px-margin py-space-xl">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-xl items-start">
-            {/* Left: Composite Canvas Stage Preview */}
-            <div className="print-output lg:col-span-7 flex flex-col items-center">
-              <CanvasStage
-                ref={stageRef}
-                frame={selectedFrame}
-                photos={capturedPhotos}
-                filterKey={activeFilter}
-              />
+            {/* Left: Composite Canvas Stage Preview with Polaroid Ejection */}
+            <div className="print-output lg:col-span-7 flex flex-col items-center w-full">
+              <PolaroidEjectionStage>
+                <CanvasStage
+                  ref={stageRef}
+                  frame={selectedFrame}
+                  photos={capturedPhotos}
+                  filterKey={activeFilter}
+                />
+              </PolaroidEjectionStage>
             </div>
 
             {/* Right: Export Actions */}

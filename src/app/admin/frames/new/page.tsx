@@ -2,10 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { SlotMapperCanvas } from '@/components/admin/SlotMapperCanvas';
-import { type FrameSlot } from '@/stores/usePhotoboothStore';
-import { createAdminFrame, getAdminLayouts, getLayouts, type BackendLayout } from '@/lib/api';
-import { Upload, Save, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import {
+  createAdminFrame,
+  updateAdminLayout,
+  getAdminLayouts,
+  getLayouts,
+  type BackendLayout,
+} from '@/lib/api';
+import {
+  detectAndPunchGreenScreen,
+  type GreenScreenDetectionResult,
+} from '@/lib/greenScreenDetector';
+import { calculateAspectRatioString } from '@/app/admin/layouts/types';
+import { GreenScreenReviewPanel } from '@/components/admin/GreenScreenReviewPanel';
+import { Upload, ArrowLeft, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function NewFramePage() {
@@ -14,13 +24,13 @@ export default function NewFramePage() {
   const [layouts, setLayouts] = useState<BackendLayout[]>([]);
   const [frameName, setFrameName] = useState('');
   const [layoutId, setLayoutId] = useState('layout_3_strip');
-  const [imageSrc, setImageSrc] = useState<string>('/frames/y2k_strip_pink.svg');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [slots, setSlots] = useState<FrameSlot[]>([
-    { index: 0, x: 40, y: 90, width: 400, height: 360 },
-    { index: 1, x: 40, y: 480, width: 400, height: 360 },
-    { index: 2, x: 40, y: 870, width: 400, height: 360 },
-  ]);
+  const [originalImageSrc, setOriginalImageSrc] = useState<string | null>(null);
+
+  // Green screen detection state
+  const [isScanning, setIsScanning] = useState(false);
+  const [detection, setDetection] = useState<GreenScreenDetectionResult | null>(null);
+
   const [isSaving, setIsSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -39,55 +49,75 @@ export default function NewFramePage() {
     loadLayouts();
   }, []);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setSelectedFile(file);
+    setErrorMsg(null);
+    setDetection(null);
+
     const reader = new FileReader();
     reader.onload = (event) => {
       if (typeof event.target?.result === 'string') {
-        setImageSrc(event.target.result);
+        setOriginalImageSrc(event.target.result);
       }
     };
     reader.readAsDataURL(file);
+
+    // Run automated Green Screen Detection at exact frame template dimensions
+    setIsScanning(true);
+    try {
+      const result = await detectAndPunchGreenScreen(file);
+      setDetection(result);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal memindai area Green Screen';
+      setErrorMsg(msg);
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   const handleSave = async () => {
     if (!frameName.trim()) {
-      alert('Please enter a frame name first.');
+      alert('Silakan isi nama template frame terlebih dahulu.');
+      return;
+    }
+
+    if (!detection || detection.slots.length === 0) {
+      alert('Silakan upload template frame dengan area Green Screen (#00FF00).');
       return;
     }
 
     setIsSaving(true);
     setErrorMsg(null);
     try {
+      // Synchronize the parent layout's canvas dimensions and aspect ratio to match the uploaded frame template!
+      const origW = detection.originalWidth;
+      const origH = detection.originalHeight;
+      const calculatedRatio = calculateAspectRatioString(origW, origH);
+
+      try {
+        await updateAdminLayout(layoutId, {
+          canvas_width: origW,
+          canvas_height: origH,
+          aspect_ratio: calculatedRatio,
+        });
+      } catch (layoutErr) {
+        console.warn('Could not auto-sync layout canvas dimensions:', layoutErr);
+      }
+
       const formData = new FormData();
       formData.append('layout_id', layoutId);
       formData.append('name', frameName);
-      formData.append('slots', JSON.stringify(slots));
+      formData.append('slots', JSON.stringify(detection.slots));
 
-      if (selectedFile) {
-        formData.append('file', selectedFile);
-      } else {
-        // Fallback to fetch existing asset template as blob
-        try {
-          const res = await fetch(imageSrc);
-          const blob = await res.blob();
-          formData.append('file', blob, 'template.png');
-        } catch {
-          // If blob fetch fails, create an empty 1x1 png blob
-          const canvas = document.createElement('canvas');
-          canvas.width = 480;
-          canvas.height = 1400;
-          const blob = await new Promise<Blob | null>((resolve) =>
-            canvas.toBlob(resolve, 'image/png')
-          );
-          if (blob) {
-            formData.append('file', blob, 'template.png');
-          }
-        }
-      }
+      // Upload the punched transparent PNG (where green color is removed)
+      formData.append(
+        'file',
+        detection.punchedBlob,
+        `${frameName.toLowerCase().replace(/\s+/g, '_')}.png`
+      );
 
       await createAdminFrame(formData);
 
@@ -96,34 +126,43 @@ export default function NewFramePage() {
         router.push('/admin/frames');
       }, 1500);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to save frame template to studio catalog.';
+      const message = err instanceof Error ? err.message : 'Gagal menyimpan template frame.';
       setErrorMsg(message);
     } finally {
       setIsSaving(false);
     }
   };
 
+  const currentLayout = layouts.find((l) => l.id === layoutId);
+
   return (
-    <div>
+    <div className="max-w-5xl mx-auto pb-12">
+      {/* Header */}
       <div className="mb-6">
         <Link
           href="/admin/frames"
           className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary hover:underline mb-2"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to Frames
+          <ArrowLeft className="w-4 h-4" /> Kembali ke Katalog Frames
         </Link>
-        <h1 className="font-serif text-3xl md:text-4xl font-bold text-primary">
-          New Frame &amp; Visual Slot Mapper
-        </h1>
-        <p className="text-xs text-on-surface-variant mt-1">
-          Upload transparent PNG template, then visually drag or input photo bounding boxes.
+        <div className="flex items-center gap-2">
+          <h1 className="font-serif text-3xl md:text-4xl font-bold text-primary">
+            Upload Frame Green Screen
+          </h1>
+          <span className="px-2.5 py-1 rounded-full bg-secondary-fixed text-secondary font-mono text-[11px] font-bold uppercase tracking-wider">
+            Auto-Detect
+          </span>
+        </div>
+        <p className="text-xs text-on-surface-variant mt-1.5 leading-relaxed">
+          Unggah file template PNG ber-green screen (<code className="text-primary font-bold">#00FF00</code>).
+          Sistem akan memindai posisi slot foto secara otomatis dan melubangi area hijau menjadi transparan.
         </p>
       </div>
 
       {success && (
         <div className="mb-6 p-4 rounded-2xl bg-green-50 border border-green-200 flex items-center gap-2 text-green-800 text-sm font-bold shadow-xs">
           <CheckCircle2 className="w-5 h-5 text-green-600" />
-          <span>Frame successfully saved to studio catalog!</span>
+          <span>Template frame berhasil diproses dan disimpan ke katalog studio!</span>
         </div>
       )}
 
@@ -134,25 +173,25 @@ export default function NewFramePage() {
         </div>
       )}
 
-      {/* Frame Meta Form */}
+      {/* Frame Form Setup */}
       <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-xs mb-8 grid grid-cols-1 sm:grid-cols-3 gap-5">
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-on-surface mb-1.5">
-            Frame Title
+            Nama Frame
           </label>
           <input
             type="text"
             required
             value={frameName}
             onChange={(e) => setFrameName(e.target.value)}
-            placeholder="e.g. Y2K Ribbon Pastel Strip"
+            placeholder="Contoh: Airmail Vintage 3-Strip"
             className="w-full px-3 py-2.5 rounded-xl border border-outline-variant/40 text-sm font-medium bg-surface-container-low text-on-surface focus:outline-hidden focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all"
           />
         </div>
 
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-on-surface mb-1.5">
-            Linked Layout Format
+            Format Layout
           </label>
           <select
             value={layoutId}
@@ -179,14 +218,14 @@ export default function NewFramePage() {
 
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-on-surface mb-1.5">
-            Upload Custom PNG Frame
+            File PNG Frame Green Screen
           </label>
           <label className="w-full py-2.5 px-3 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant/40 text-on-surface text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-[0.98] transition-all">
             <Upload className="w-4 h-4 text-primary" />
-            <span>Choose File</span>
+            <span>{selectedFile ? selectedFile.name : 'Pilih File PNG'}</span>
             <input
               type="file"
-              accept="image/png,image/svg+xml"
+              accept="image/png"
               onChange={handleFileUpload}
               className="hidden"
             />
@@ -194,41 +233,27 @@ export default function NewFramePage() {
         </div>
       </div>
 
-      {/* Interactive Visual Slot Mapper */}
-      {(() => {
-        const currentLayout = layouts.find((l) => l.id === layoutId);
-        const canvasWidth =
-          currentLayout?.canvas_width ||
-          (layoutId === 'layout_2_polaroid' ? 600 : layoutId === 'layout_4_grid' ? 1200 : 600);
-        const canvasHeight =
-          currentLayout?.canvas_height ||
-          (layoutId === 'layout_2_polaroid' ? 900 : layoutId === 'layout_4_grid' ? 1200 : 1800);
+      {/* Scanning Indicator */}
+      {isScanning && (
+        <div className="p-8 rounded-2xl bg-surface-container-lowest border border-primary/20 shadow-xs flex flex-col items-center justify-center text-center mb-8">
+          <Loader2 className="w-8 h-8 text-primary animate-spin mb-3" />
+          <span className="font-bold text-sm text-primary">Memindai Area Green Screen...</span>
+          <span className="text-xs text-on-surface-variant mt-1">
+            Mendeteksi koordinat pulau hijau dan melubangi frame secara otomatis...
+          </span>
+        </div>
+      )}
 
-        return (
-          <div className="mb-8">
-            <SlotMapperCanvas
-              imageSrc={imageSrc}
-              slots={slots}
-              onSlotsChange={setSlots}
-              canvasWidth={canvasWidth}
-              canvasHeight={canvasHeight}
-            />
-          </div>
-        );
-      })()}
-
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <button
-          type="button"
-          disabled={isSaving}
-          onClick={handleSave}
-          className="px-8 py-3.5 rounded-xl bg-primary hover:bg-primary-container text-on-primary text-xs font-extrabold uppercase tracking-widest shadow-xs flex items-center gap-2 cursor-pointer active:scale-[0.98] transition-all"
-        >
-          <Save className="w-4 h-4" />
-          <span>{isSaving ? 'Saving Template...' : 'Save Frame Template'}</span>
-        </button>
-      </div>
+      {/* Visual Review Panel */}
+      {detection && !isScanning && (
+        <GreenScreenReviewPanel
+          detection={detection}
+          originalImageSrc={originalImageSrc}
+          currentLayout={currentLayout}
+          isSaving={isSaving}
+          onSave={handleSave}
+        />
+      )}
     </div>
   );
 }
